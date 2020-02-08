@@ -7,53 +7,56 @@ using namespace std;
 struct polyhedron{
     int vertex_num;
     int facet_num;
-    vector<vector<float> > vertices; 
-    vector<vector<int> > facets;
+    float **vertices; 
+    int **facets;
 };
 
 int main()
 {
-  vector<float> data[3];
-  vector<int> dataInt[3];
   struct polyhedron instPoly;
   std::ifstream infile("0.off");
-  bool isInt=false;;
+  // Build for facets
+  instPoly.facets = (int**)malloc(276 * sizeof(int*));
+  for(int i = 0; i < 276; i++)
+      instPoly.facets[i] = (int*)malloc(3 * sizeof(int));
+  //Build for vertex
+  instPoly.vertices = (float**)malloc(149 * sizeof(int*));
+  for(int i = 0; i < 141; i++)
+      instPoly.vertices[i] = (float*)malloc(3 * sizeof(int));;
+  int count = 0;
   string line;
-  int i=0;
-
   while(getline(infile, line))
   {
-    //istringstream iss(line);
-    float a, b,c;
-    int ia,ib,ic;
-    if (!(infile >> a >> b >> c)) { 
-        break; 
-    } // error
-	
-	if(a % 1 == 0)
-	{
-	 isInt = true;
-	 dataInt[0]= ia;
-	 dataInt[1]= ib;
-	 dataInt[2]= ic;
-	instPoly.facets.push_back(data);
-	}
-       else
-       {
-	data[0]= a;
-	data[1]= b;
-	data[2]= c;
-	instPoly.vertices.push_back(data);
-       }
-	
-	
-	//cout << a << b << c << endl;
-    // process pair (a,b)
+    count++;
+    istringstream iss(line);
+    float a, b,c,d;
+    int ia,ib,ic,id;
+    if(count > 1 && count < 143){
+        if (!(infile >> a >> b >> c )) { 
+            break; 
+        } 
+        //cout << a << endl;
+        instPoly.vertices[count-2][0] = a;
+        instPoly.vertices[count-2][1] = b;
+        instPoly.vertices[count-2][2] = c;
+    }else if(count > 142){
+        if (!(infile >> ia >> ib >> ic >>id)) { 
+            break; 
+        } 
+        //cout << b << endl;
+        instPoly.facets[count-143][0] = ib;
+        instPoly.facets[count-143][1] = ic;
+        instPoly.facets[count-143][2] = id;
+    }
+    
+    //float a, b,c;
+    
+    // error
   }
 
-  for(i=0;i<10;i++)
+  for(int i=0;i<140;i++)
   {
-	cout<< instPoly.facets[i][0]] << endl;
+	    cout<< instPoly.vertices[i][0] << " "<< instPoly.vertices[i][1] <<" " << instPoly.vertices[i][2] << " " << endl;
   }
 }
 
