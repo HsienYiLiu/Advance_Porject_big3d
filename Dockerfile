@@ -11,7 +11,7 @@ MAINTAINER Hsien-Yi Liu
 
 # Updating command
 RUN echo "deb http://archive.ubuntu.com/ubuntu/ raring main universe" >> /etc/apt/sources.list
-RUN ../shane/hello
+RUN g++ readFile.cpp
 #RUN apt-get update && apt-get install -y nginx
 #RUN echo "\ndaemon off;" >> /etc/nginx/nginx.conf
 
