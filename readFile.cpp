@@ -3,6 +3,7 @@
 #include <string>
 #include<iostream>
 #include <cstdlib>
+#include <stdlib.h>
 
 using namespace std;
 struct polyhedron{
@@ -49,6 +50,10 @@ int main()
         instPoly.facets[count-143][1] = ic;
         instPoly.facets[count-143][2] = id;
     }
+    
+    //float a, b,c;
+    
+    // error
   }
 
   for(int i=0;i<140;i++)
