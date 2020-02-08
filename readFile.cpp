@@ -2,7 +2,7 @@
 #include <sstream>
 #include <string>
 #include<iostream>
-#include <cstdlib>
+//#include <stdlib.h>
 
 using namespace std;
 struct polyhedron{
