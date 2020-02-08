@@ -7,5 +7,5 @@
 FROM gcc:4.9
 COPY . /home/liu/advance_porject_big3d
 WORKDIR /home/liu/advance_porject_big3d
-RUN gcc -o myapp readFile.c
+RUN gcc -o myapp readFile.cpp
 CMD ["./myapp"]
