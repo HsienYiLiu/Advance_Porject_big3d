@@ -4,16 +4,8 @@
 # Command format: Instruction [arguments / command] ..
 
 # From fist command for importing image
-FROM ubuntu
-
-# Name of Maintainer
-MAINTAINER Hsien-Yi Liu
-
-# Updating command
-RUN echo "deb http://archive.ubuntu.com/ubuntu/ raring main universe" >> /etc/apt/sources.list
-RUN g++ readFile.cpp
-#RUN apt-get update && apt-get install -y nginx
-#RUN echo "\ndaemon off;" >> /etc/nginx/nginx.conf
-
-# Command for creating new container
-#CMD /usr/sbin/nginx
+FROM gcc:4.9
+COPY . /home/liu/advance_porject_big3d
+WORKDIR /home/liu/advance_porject_big3d
+RUN gcc -o myapp readFile.c
+CMD ["./myapp"]
