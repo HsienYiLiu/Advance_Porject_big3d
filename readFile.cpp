@@ -60,5 +60,7 @@ int main()
   {
 	    cout<< instPoly.vertices[i][0] << " "<< instPoly.vertices[i][1] <<" " << instPoly.vertices[i][2] << " " << endl;
   }
+  free(instPoly.vertices);
+  free(instPoly.facets);
 }
 
