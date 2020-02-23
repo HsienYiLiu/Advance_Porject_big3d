@@ -59,10 +59,14 @@ int main()
     }
   }
   //tesing output
+  
   for(int i=0;i<140;i++)
   {
 	    cout<< instPoly.vertices[i][0] << " "<< instPoly.vertices[i][1] <<" " << instPoly.vertices[i][2] << " " << endl;
   }
+  
+  
+  cout << instPoly.vertices[instPoly.facets[7][2]][1]<< endl;
   free(instPoly.vertices);
   free(instPoly.facets);
 }
