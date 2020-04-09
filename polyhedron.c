@@ -32,39 +32,42 @@ typedef double tPointd[DIM];   /* Type double point */
 #define PMAX 10000             /* Max # of pts */
 tPointd Vertices[PMAX];        /* All the points */
 tPointi Faces[PMAX];           /* Each triangle face is 3 indices */
+tPointd com_Vertices[PMAX];    
+tPointi com_Faces[PMAX];         
 int check = 0;
 tPointi Box[PMAX][2];          /* Box around each face */
-int n_facets = 0;
-int n_vertices = 0;
+int n_facets, n_vertices;      /* Original polyhedron*/
+int com_facets, com_vertices;  /* Original polyhedron*/
+
 /*---------------------------------------------------------------------
 Function prototypes.
 ---------------------------------------------------------------------*/
-char 	InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
-char    SegPlaneInt( tPointi Triangle, tPointd q, tPointd r, tPointd p, int *m )
-;
-int     PlaneCoeff( tPointi T, tPointd N, double *D );
-void    Assigndi( tPointd p, tPointi a );
-int     ReadVertices( void );
-int     ReadFaces( void );
-void    NormalVec( tPointd q, tPointd b, tPointd c, tPointd N );
-double  Dot( tPointd q, tPointd d );
-void    SubVec( tPointd q, tPointd b, tPointd c );
-char    InTri3D( tPointi T, int m, tPointd p );
-char    InTri2D( tPointd Tp[3], tPointd pp );
-int     AreaSign( tPointd q, tPointd b, tPointd c );
-char    SegTriInt( tPointi Triangle, tPointd q, tPointd r, tPointd p );
-char    InPlane( tPointi Triangle, int m, tPointd q, tPointd r, tPointd p);
-int     VolumeSign( tPointd a, tPointd b, tPointd c, tPointd d );
-char    SegTriCross( tPointi Triangle, tPointd q, tPointd r );
-int  	ComputeBox( int F, tPointd bmin, tPointd bmax );
-void 	RandomRay( tPointd ray, int radius );
+char  InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
+char  SegPlaneInt( tPointi Triangle, tPointd q, tPointd r, tPointd p, int *m );
+int   PlaneCoeff( tPointi T, tPointd N, double *D );
+void  Assigndi( tPointd p, tPointi a );
+int   ReadVertices( void );
+int   ReadFaces( void );
+void  NormalVec( tPointd q, tPointd b, tPointd c, tPointd N );
+double Dot( tPointd q, tPointd d );
+void  SubVec( tPointd q, tPointd b, tPointd c );
+char  InTri3D( tPointi T, int m, tPointd p );
+char  InTri2D( tPointd Tp[3], tPointd pp );
+int   AreaSign( tPointd q, tPointd b, tPointd c );
+char  SegTriInt( tPointi Triangle, tPointd q, tPointd r, tPointd p );
+char  InPlane( tPointi Triangle, int m, tPointd q, tPointd r, tPointd p);
+int   VolumeSign( tPointd a, tPointd b, tPointd c, tPointd d );
+char  SegTriCross( tPointi Triangle, tPointd q, tPointd r );
+int   ComputeBox( int F, tPointd bmin, tPointd bmax );
+void  RandomRay( tPointd ray, int radius );
 void 	AddVec( tPointd q, tPointd ray );
 int  	InBox( tPointd q, tPointd bmin, tPointd bmax );
 char 	BoxTest ( int n, tPointd a, tPointd b );
 void 	PrintPoint( tPointi q );
 int	irint( double x);
-void read_file(void);
-void init_bounding(int n);
+void  read_ori(void);
+void  read_com(void);
+void  init_bounding(int n);
 //double get_time_elapsed(struct timeval &t1);
 /*-------------------------------------------------------------------*/
 inline struct timeval get_cur_time(){ 
@@ -93,7 +96,8 @@ int main()
   int radius;
 
   //srandom( (int) time( (long *) 0 ) ); 
-  read_file();
+  read_ori();
+  read_com();
   n = n_vertices;
   F = n_facets;
   init_bounding(n_facets);
@@ -107,18 +111,18 @@ int main()
   // bmax --> doublemin
   radius = ComputeBox( n, bmin, bmax );
   printf("radius=%d\n", radius);
-
-  while( scanf( "%lf %lf %lf", &q[X], &q[Y], &q[Z] ) != EOF ) {
-    printf( "\n----------->q = %lf %lf %lf\n", 
-       q[X], q[Y], q[Z] );
-    time_t begin = time(NULL); 
-    printf( "In = %c\n", 
-       InPolyhedron( F, q, bmin, bmax, radius ) );
-    //double te = get_time_elapsed(start);
-    //printf( "Time elaspsed = %f\n", te );
-    time_t end = time(NULL); 
-    printf("Time elpased is %d seconds", (end - begin));
+  int counter = com_vertices;
+  time_t begin = time(NULL);
+  while( counter != 0 ) {
+      q[X] = com_Vertices[counter][X];
+      q[Y] = com_Vertices[counter][Y];
+      q[Z] = com_Vertices[counter][Z];
+      printf( "\n-------->q = %lf %lf %lf\n", q[X], q[Y], q[Z] );
+      printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
+      counter--;
   }
+  time_t end = time(NULL); 
+  printf("Time elpased is %ld seconds", (end - begin));
 }
 
 /*
@@ -151,10 +155,10 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
       for ( f = 0; f < F; f++ ) {  /* Begin check each face */
          if ( BoxTest( f, q, r ) == '0' ) {
               code = '0';
-              printf("BoxTest = 0!\n");
+              //printf("BoxTest = 0!\n");
          }
          else code = SegTriInt( Faces[f], q, r, p );
-         printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
+         //printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
          /* If ray is degenerate, then goto outer while to generate another. */
          if ( code == 'p' || code == 'v' || code == 'e' ) {
@@ -287,7 +291,7 @@ char	SegPlaneInt( tPointi T, tPointd q, tPointd r, tPointd p, int *m)
     /*printf("SegPlaneInt: t=%lf \n", t );*/
 
     for( i = 0; i < DIM; i++ ){
-       printf("PPP -1: t=%lf \n", p[i] );
+       //printf("PPP -1: t=%lf \n", p[i] );
        p[i] = q[i] + t * ( r[i] - q[i] );
     }
 
@@ -659,7 +663,7 @@ int irint( double x )
 {
 	return (int) rint( x );
 }
-void read_file(void)
+void read_ori(void)
 {
     FILE * fp;
     char * line = NULL;
@@ -684,7 +688,7 @@ void read_file(void)
                     n_facets = atoi(token);
                 }
                 token_count++;
-            }else if(count > 3 && count < 144){
+            }else if(count > 3 && count <  n_vertices - 4){
                 if(token_count == 0){
                     Vertices[count - 4][X] = atof(token);
                 }else if(token_count == 1){
@@ -693,7 +697,6 @@ void read_file(void)
                     Vertices[count - 4][Z] = atof(token);
                 }
                 token_count++;
-                //printf("vertice --> %s\n", token);
             } else{
                 if(token_count == 1){
                     Faces[count - 144][X] = atoi(token);
@@ -702,27 +705,63 @@ void read_file(void)
                 }else if(token_count == 3){
                     Faces[count - 144][Z] = atoi(token);
                 }
-                //printf("faces--> %s\n", token);
                 token_count++;
             } 
-            
-            //printf("XDDD --> %s\n", token); 
-            
             token = strtok(NULL, " "); 
         } 
-        
-        //printf("Retrieved line of length %zu:\n", read);
-        //printf("%f \n", a);
-    }/*
-    for(int i = 0; i < n_vertices; i++){
-        printf("No %d, facets --> %f, %f, %f \n", i,Vertices[i][X],Vertices[i][Y],Vertices[i][Z]);
     }
-    printf("n_vertices --> %d\n",n_vertices);
-    printf("n_f--> %d\n",n_facets);
-    fclose(fp);*/
     if (line)
         free(line);
-    //exit(EXIT_SUCCESS);
+}
+void read_com(void)
+{
+    FILE * fp;
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int count = 0;
+    float a,b,c;
+    fp = fopen("small.off", "r");
+    if (fp == NULL)
+        exit(EXIT_FAILURE);
+    while ((read = getline(&line, &len, fp)) != -1) {
+        count++;
+        char *token = strtok(line, " "); 
+        int token_count = 0;
+        while (token != NULL) {  
+            // init facets and vertices
+            if(count <= 2){
+                printf("setting of file  %s\n", token);
+                if(token_count == 0){
+                    com_vertices = atoi(token);
+                }else if(token_count == 1){
+                    com_facets = atoi(token);
+                }
+                token_count++;
+            }else if(count > 3 && count < n_vertices - 4){
+                if(token_count == 0){
+                    com_Vertices[count - 4][X] = atof(token);
+                }else if(token_count == 1){
+                    com_Vertices[count - 4][Y] = atof(token);
+                }else{
+                    com_Vertices[count - 4][Z] = atof(token);
+                }
+                token_count++;
+            } else{
+                if(token_count == 1){
+                    com_Faces[count - 144][X] = atoi(token);
+                }else if(token_count == 2){
+                    com_Faces[count - 144][Y] = atoi(token);
+                }else if(token_count == 3){
+                    com_Faces[count - 144][Z] = atoi(token);
+                }
+                token_count++;
+            } 
+            token = strtok(NULL, " "); 
+        } 
+    }
+    if (line)
+        free(line);
 }
 void init_bounding(int n){
    int i,j,k,w;
