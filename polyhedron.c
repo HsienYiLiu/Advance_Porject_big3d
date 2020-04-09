@@ -1,14 +1,12 @@
 /*
 This code is described in "Computational Geometry in C" (Second Edition),
-Chapter 7.  It is not written to be comprehensible without the
-explanation in that book.
+Chapter 7.  
 
 Compile:    gcc -o inhedron inhedron.c -lm (or simply: make)
 Run (e.g.): inhedron < i.8
 
-Written by Joseph O'Rourke, with contributions by Min Xu.
-Last modified: April 1998
-Questions to orourke@cs.smith.edu.
+Written by Hsien-Yi Liu, refer to Joseph O'Rourke, with contributions by Min Xu.
+
 --------------------------------------------------------------------
 This code is Copyright 1998 by Joseph O'Rourke.  It may be freely
 redistributed in its entirety provided that this copyright notice is
@@ -18,6 +16,9 @@ not removed.
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
+#include <sys/time.h>
+#include <string.h> 
 #define EXIT_FAILURE 1
 #define X 0
 #define Y 1
@@ -33,7 +34,8 @@ tPointd Vertices[PMAX];        /* All the points */
 tPointi Faces[PMAX];           /* Each triangle face is 3 indices */
 int check = 0;
 tPointi Box[PMAX][2];          /* Box around each face */
-
+int n_facets = 0;
+int n_vertices = 0;
 /*---------------------------------------------------------------------
 Function prototypes.
 ---------------------------------------------------------------------*/
@@ -61,7 +63,28 @@ int  	InBox( tPointd q, tPointd bmin, tPointd bmax );
 char 	BoxTest ( int n, tPointd a, tPointd b );
 void 	PrintPoint( tPointi q );
 int	irint( double x);
+void read_file(void);
+void init_bounding(int n);
+//double get_time_elapsed(struct timeval &t1);
 /*-------------------------------------------------------------------*/
+inline struct timeval get_cur_time(){ 
+ struct timeval t1; 
+ gettimeofday(&t1, NULL); 
+ return t1; 
+ } 
+ inline double get_time_elapsed(struct timeval t1){ 
+   struct timeval t2; 
+   double elapsedTime; 
+   gettimeofday(&t2, NULL); 
+   // compute and print the elapsed time in millisec 
+   elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0; // sec to ms 
+   elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0; // us to ms 
+   //if(update_start){ 
+     // t1 = get_cur_time(); 
+   //} 
+   return elapsedTime; 
+ }
+
 
 int main()
 {
@@ -70,24 +93,31 @@ int main()
   int radius;
 
   //srandom( (int) time( (long *) 0 ) ); 
-
-  n = ReadVertices();
-  F = ReadFaces();
+  read_file();
+  n = n_vertices;
+  F = n_facets;
+  init_bounding(n_facets);
 
   /* Initialize the bounding box */
   for ( i = 0; i < DIM; i++ ){
     bmin[i] = bmax[i] = Vertices[0][i];
     printf("bmin=%lf\n", Vertices[0][i]);
    }
-  
+  // bmin --> doublemax
+  // bmax --> doublemin
   radius = ComputeBox( n, bmin, bmax );
   printf("radius=%d\n", radius);
 
   while( scanf( "%lf %lf %lf", &q[X], &q[Y], &q[Z] ) != EOF ) {
     printf( "\n----------->q = %lf %lf %lf\n", 
        q[X], q[Y], q[Z] );
+    time_t begin = time(NULL); 
     printf( "In = %c\n", 
        InPolyhedron( F, q, bmin, bmax, radius ) );
+    //double te = get_time_elapsed(start);
+    //printf( "Time elaspsed = %f\n", te );
+    time_t end = time(NULL); 
+    printf("Time elpased is %d seconds", (end - begin));
   }
 }
 
@@ -297,7 +327,7 @@ int	PlaneCoeff( tPointi T, tPointd N, double *D )
 Reads in the number and coordinates of the vertices of a polyhedron
 from stdin, and returns n, the number of vertices.
 ---------------------------------------------------------------------*/
-int 	ReadVertices( void )
+int 	ReadVertices(void )
 {
    int   i, n;
 
@@ -628,4 +658,94 @@ char BoxTest ( int n, tPointd a, tPointd b )
 int irint( double x )
 {
 	return (int) rint( x );
+}
+void read_file(void)
+{
+    FILE * fp;
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int count = 0;
+    float a,b,c;
+    fp = fopen("0.off", "r");
+    if (fp == NULL)
+        exit(EXIT_FAILURE);
+    while ((read = getline(&line, &len, fp)) != -1) {
+        count++;
+        char *token = strtok(line, " "); 
+        int token_count = 0;
+        while (token != NULL) {  
+            // init facets and vertices
+            if(count <= 2){
+                printf("setting of file  %s\n", token);
+                if(token_count == 0){
+                    n_vertices = atoi(token);
+                }else if(token_count == 1){
+                    n_facets = atoi(token);
+                }
+                token_count++;
+            }else if(count > 3 && count < 144){
+                if(token_count == 0){
+                    Vertices[count - 4][X] = atof(token);
+                }else if(token_count == 1){
+                    Vertices[count - 4][Y] = atof(token);
+                }else{
+                    Vertices[count - 4][Z] = atof(token);
+                }
+                token_count++;
+                //printf("vertice --> %s\n", token);
+            } else{
+                if(token_count == 1){
+                    Faces[count - 144][X] = atoi(token);
+                }else if(token_count == 2){
+                    Faces[count - 144][Y] = atoi(token);
+                }else if(token_count == 3){
+                    Faces[count - 144][Z] = atoi(token);
+                }
+                //printf("faces--> %s\n", token);
+                token_count++;
+            } 
+            
+            //printf("XDDD --> %s\n", token); 
+            
+            token = strtok(NULL, " "); 
+        } 
+        
+        //printf("Retrieved line of length %zu:\n", read);
+        //printf("%f \n", a);
+    }/*
+    for(int i = 0; i < n_vertices; i++){
+        printf("No %d, facets --> %f, %f, %f \n", i,Vertices[i][X],Vertices[i][Y],Vertices[i][Z]);
+    }
+    printf("n_vertices --> %d\n",n_vertices);
+    printf("n_f--> %d\n",n_facets);
+    fclose(fp);*/
+    if (line)
+        free(line);
+    //exit(EXIT_SUCCESS);
+}
+void init_bounding(int n){
+   int i,j,k,w;
+   for ( i = 0; i < n; i++ ) {
+      for ( j=0; j < 3; j++ ) {
+         Box[i][0][j] = Vertices[ Faces[i][0] ][j];
+         Box[i][1][j] = Vertices[ Faces[i][0] ][j];
+      }
+      /* Check k=1,2 vertices of face. */
+      for ( k=1; k < 3; k++ )
+      for ( j=0; j < 3; j++ ) {
+         w = Vertices[ Faces[i][k] ][j];
+         if ( w < Box[i][0][j] ) Box[i][0][j] = w;
+         if ( w > Box[i][1][j] ) Box[i][1][j] = w;
+      }
+    /*
+    printf("Bounding box: (%d,%d,%d);(%d,%d,%d)\n",
+       Box[i][0][0],
+       Box[i][0][1],
+       Box[i][0][2],
+       Box[i][1][0],
+       Box[i][1][1],
+       Box[i][1][2] );
+    */
+  }
 }
