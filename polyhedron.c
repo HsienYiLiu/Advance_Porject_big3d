@@ -93,6 +93,10 @@ int main(){
     printf("radius=%d\n", radius);
     int counter = com_vertices - 1;
     time_t begin = time(NULL);
+    for(int i = 0; i < n_vertices; i++){
+       printf( "In = %fn %f %f \n", Vertices[i][X],Vertices[i][Y], Vertices[i][Z]);
+    }
+    /*
     while( counter >= 0 ) {
         q[X] = com_Vertices[counter][X];
         q[Y] = com_Vertices[counter][Y];
@@ -103,6 +107,12 @@ int main(){
     }
     time_t end = time(NULL); 
     printf("Time elpased is %ld seconds", (end - begin));
+    */
+     while( scanf( "%lf %lf %lf", &q[X], &q[Y], &q[Z] ) != EOF ) {
+         printf( "\n----------->q = %lf %lf %lf\n", 
+            q[X], q[Y], q[Z] );
+         printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
+  }
 }
 
 /*
@@ -568,7 +578,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("0.off", "r");
+    fp = fopen("big.off", "r");
     if (fp == NULL)
         exit(EXIT_FAILURE);
     while ((read = getline(&line, &len, fp)) != -1) {
@@ -585,7 +595,8 @@ void read_ori(void)
                     n_facets = atoi(token);
                 }
                 token_count++;
-            }else if(count > 3 && count <  n_vertices - 4){
+
+            }else if(count > 3 || count <  n_vertices+ 4){
                 if(token_count == 0){
                     Vertices[count - 4][X] = atof(token);
                 }else if(token_count == 1){
@@ -635,7 +646,7 @@ void read_com(void)
                     com_facets = atoi(token);
                 }
                 token_count++;
-            }else if(count > 3 && count < n_vertices - 4){
+            }else if(count > 3 && count < n_vertices + 4){
                 if(token_count == 0){
                     com_Vertices[count - 4][X] = atof(token);
                 }else if(token_count == 1){
