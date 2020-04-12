@@ -103,23 +103,26 @@ int main(){
     }
     time_t end = time(NULL); 
     printf("Time elpased is %ld seconds \n", (end - begin));
-
-    tPointd test[2];
-    test[0][X] = -1;
-    test[0][Y] = 0;
-    test[0][Z] = 0;
-    test[1][X] = 0;
-    test[1][Y] = -1;
-    test[1][Z] = 0;
-    printf("--------- Checking Contains %c\n",CheckAllContain(F,test[0],test[1]));
-    
+    /* Permutation two points to test 
+       if they have intersection with outer polyhedron
+    */
+    for(int i = 0; i < com_vertices-1; i++){
+       for(int j = i+1; j < com_vertices; j++){
+          if(CheckAllContain(F,com_Vertices[i],com_Vertices[j]) == 'T')
+              continue;
+          else
+              printf("Inner polyhedron doesn't fully contain in the outer polyhedron"); 
+              EXIT_SUCCESS;       
+       }
+    }
+    printf("Inner polyhedron fully contains in the outer polyhedron");
 }
 
 
 /*
 Check all of the inner polyhedron vertices contain in the outer polyhedron
 */
-char CheckAllContain(int F,tPointd Point_1, tPointd Point_2){
+char CheckAllContain(int F, tPointd Point_1, tPointd Point_2){
     int f;
     int m = -1;
     tPointd p;
@@ -301,7 +304,6 @@ char	SegPlaneInt( tPointi T, tPointd q, tPointd r, tPointd p, int *m)
     /*printf("SegPlaneInt: t=%lf \n", t );*/
 
     for( i = 0; i < DIM; i++ ){
-       printf("PPP -1: t=%lf \n", p[i] );
        p[i] = q[i] + t * ( r[i] - q[i] );
     }
 
