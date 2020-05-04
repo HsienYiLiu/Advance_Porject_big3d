@@ -1,0 +1,14 @@
+A template utility program is provided in the directory "nummod".
+To compile the program, go into that directory and type "make".
+This will compile the program "nummod" from the c source code.
+This code has a variety of functions that you may use to solve the homework problems.
+The code as it is provided does not have any meaning; it is simply a collection of functions
+to help you get started.
+
+The program "nummod" requires additional files as input. The "atom parameter file"
+is provided in the directory "prms". The receptor and ligand protein files
+("rec.ms" and "lig.ms") are provided in the data directory.
+You may want to copy these files to a location you find more convenient.
+
+Thus, a sample run of the program could look like this:
+./nummod -p atom.prm rec.ms lig.ms
