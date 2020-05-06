@@ -28,3 +28,6 @@ all:
 clean:
 	$(RM) $(OBJS)
 	$(RM) nummod
+
+run: nummod
+	./nummod ../data/*.ms -p ../prm/atom.prm

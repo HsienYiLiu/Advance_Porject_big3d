@@ -103,69 +103,71 @@ int main (int argc, char* argv[])
 	struct atomgrp* agA = read_file_atomgrp (rec_ifile, prms);
 	struct atomgrp* agB = read_file_atomgrp (lig_ifile, prms);
 
-       
+        printf("\n");
+	printf("Q1-e: Tabulate the values of electrostatic energy while moving one of the protein along center of mass\n");
+        printf("Showing the 1-e results\n");
         moving_along_center(agA, agB, prms);
+	printf("\n");
+	printf("Q2-c: Write Metropolis Monte Carlo search for two proteins.\n");
+	printf("Showing the 2-c results first\n");
+	mmc_moving_protein(agA,agB,prms);
+	printf("Output 2-c result as 10 files, using pymol to see the result...\n");
+	printf("\n");
 	struct tvector* temp_tv = (struct tvector*) mymalloc (sizeof (struct tvector));
         struct tvector* com_A = center_of_mass(agA);
         struct tvector* com_B = center_of_mass(agB);
+	// Code for 1-a
 	temp_tv->X = 0.5*(com_A->X - com_B->X);
 	temp_tv->Y = 0.5*(com_A->Y - com_B->Y);
 	temp_tv->Z = 0.5*(com_A->Z - com_B->Z);
 	struct atomgrp* agA_moved = copy_atomgrp(agA);
 	translate_atomgrp (agA_moved, agA_moved,temp_tv); // translate agA 
 	char* current_ofile = (char*) mymalloc (100 * sizeof (char)); 
-	sprintf (current_ofile, "test%d.ms", 1);
+	sprintf (current_ofile, "1-a.ms");
 	fprint_file_atomgrp(current_ofile, agA_moved, prms);
-	struct tvector* cm=center_of_mass(agA_moved);
-	printf("Center of mass %.3f %.3f %.3f\n",cm->X,cm->Y,cm->Z);
+	printf("Q1-a: Translate one of the proteins along the vector connecting center of masses of those proteins\n");
+	printf("1-a will be output as a 1-a.ms file \n");
 	srand(time(NULL));
-	double r=(double)(rand())/((RAND_MAX+1.0));
-	printf("Random number %.4f\n",r);
-	printf("Total Energy: %.4f\n", cal_energy(agA,agB, prms));
+	printf("\n");
+	printf("Q1-b: Write a function which calculates coulombic electrostatic energy between two proteins\n");
+	printf("Answer for the 1-b : %.4f\n", cal_energy(agA,agB, prms));
+	printf("\n");
 	// Evaluate E
-	clock_t start, end;
-	double elapsed;
-	float E=0;
-
-	int i;
-	start = clock();
-	for (i = 0; i < 10; i++)
-	{
-		E = complex_energy (agA, agB, prms);
-	}
-	end = clock();
-	elapsed = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf ("time: %.3f\n", elapsed);
-	printf("Energy %.3f\n",E);
-	mmc_moving_protein(agA,agB,prms);
+	// Call for the 1-c
+	printf("Q1-c: Write a function which calculates array of gradients (forces) of the electrostatic energy from one protein to another protein\n");
 	cal_gradients(agA,agB, prms);
+	printf("\n");
+	printf("Q1-d: Check that gradient calculation using analytical formula \n");
 	check_gradients(agA,agB, prms,0.001);
+	printf("\n");
+	printf("\n");
+	printf("Q1-f: Plot the values of energy as function of distance\n");
+	printf("The result of 1-f will be shown in 1-f.jpg\n");
+        printf("\n");
+	printf("Q2-a: Calculate PI using Monte Carlo (by integrating area of the circle) \n");
 	Cal_PT_MC();
+        printf("\n");
+	printf("Q2-b: Use metropolis monte carlo to perfrom the search\n");
 	Cal_MIN_CV();
-	free(com_A);
-	free(com_B);
-	free(temp_tv);
-        moving_along_center(agA, agB, prms);
+	printf("\n");
 	return EXIT_SUCCESS;
 }
 //2-c
 void mmc_moving_protein(struct atomgrp* agA, struct atomgrp* agB,struct prms* prms){
-    struct tvector* temp_tv = (struct tvector*) mymalloc (sizeof (struct tvector));
     struct tvector* com_A = center_of_mass(agA);
-    struct tvector* com_B = center_of_mass(agB);
-
+    srand(2020);
     struct atomgrp* ag_min;
     double min = 10000000;
     double temp,next;
-    double  kt = 1;
+    double  kt = 2;
     int i = 0;
     
-    while(i < 1001){
+    while(i < 10001){
 	com_A = center_of_mass(agA);
 	double ori = complex_energy(agA, agB, prms);
 	// rotational and trans atmo group
         struct atomgrp* agA_moved = copy_atomgrp(agA);
-	perturb_atomgrp(agA, agA_moved, 2, PI/36, com_A);
+	perturb_atomgrp(agA, agA_moved, 4, PI/10, com_A);
 	next = complex_energy(agA_moved, agB, prms);
 	temp = next - ori;
 	if(next < ori){
@@ -174,7 +176,7 @@ void mmc_moving_protein(struct atomgrp* agA, struct atomgrp* agB,struct prms* pr
             if(next < min){
                 min = next;
                 ag_min = agA_moved;
-                printf("Replacing min with --> %lf\n",min);
+                printf("2-C is running and find the new min with --> %lf\n",min);
             }  
 	}else{
 	    double p = (double)rand()/RAND_MAX*1-0;
@@ -188,14 +190,13 @@ void mmc_moving_protein(struct atomgrp* agA, struct atomgrp* agB,struct prms* pr
 	kt = kt - 0.0001;
 	i++;
 	// Out put the file
-	if(i % 100 == 0){
+	if(i % 1000 == 0){
 	    char* current_ofile = (char*) mymalloc (100 * sizeof (char));
-            sprintf (current_ofile, "test%d.ms", i);
+            sprintf (current_ofile, "test%d.ms", i/1000);
             fprint_file_atomgrp(current_ofile, agA, prms);
 	}
     }
-    //printf("test %f\n",min_tv->X);
-    printf("complex function %f\n",complex_energy(ag_min, agB, prms));
+    printf("2-c finally result for complex function:  %f\n",complex_energy(ag_min, agB, prms));
     //return temp_tv;
 }
 //2-b
@@ -231,8 +232,7 @@ double Cal_MIN_CV(){
 	kt = kt - 0.00001;
 	i++;
     }  
-    printf("Min energy %f\n", min);
-    printf("Last value of x --> %lf\n",min_x);
+    printf("Answer of 2-b Min energy: %f, Last value of x: %f\n", min, min_x);
     return x;
 }
 double b2_formula(double x){
@@ -251,7 +251,7 @@ double Cal_PT_MC(){
 	}
     }
     double pi = total_point_inside/1000.0;
-    printf("CAl pt mc :  %d, %f\n",(int)total_point_inside, pi*4);
+    printf("Answer of 2-a, Total points inside: %d, PI: %f\n",(int)total_point_inside, pi*4);
     return pi*4;
 }
 // 1-e 
@@ -275,7 +275,7 @@ void moving_along_center(struct atomgrp* agA,struct atomgrp* agB,struct prms* pr
         struct atomgrp* agA_moved = copy_atomgrp(agA);
         translate_atomgrp (agA_moved, agA_moved,temp_tv);
         energy = cal_energy(agA_moved,agB,prms);
-        printf("Moving along with the pro %d, %.4f\n",i,energy);
+        printf("Moving Step: %d,  Energy: %.4f\n",i,energy);
 
     }
 }
@@ -321,9 +321,11 @@ struct tvector* check_gradients(struct atomgrp* agA, struct atomgrp* agB,struct 
         temp_tv[i].Y = tempY;
         temp_tv[i].Z = tempZ; 
 	if(i < 10){
-            printf("Checking :  %f, %f, %f \n", tempX, tempY , tempZ );
+            printf("Answer of 1-d --> Checking the output of cal gradients:  %f, %f, %f \n", tempX, tempY , tempZ );
         }
     }
+    free(agA);
+    free(agB);
     //printf("Output of cal gradients %f, %f, %f",a,b,c);
     return temp_tv;
 }
@@ -355,7 +357,7 @@ struct tvector* cal_gradients(struct atomgrp* agA, struct atomgrp* agB,struct pr
 	temp_tv[i].Y = b;
 	temp_tv[i].Z = c;
 	if(i < 10){
-            printf("Output of cal gradients %f, %f, %f \n",a,b,c);
+            printf("Answer of 1-c --> Output of cal gradients %f, %f, %f \n",a,b,c);
         }
     }
     //printf("Output of cal gradients %f, %f, %f",a,b,c);
@@ -376,15 +378,7 @@ double cal_energy(struct atomgrp* agA, struct atomgrp* agB,struct prms* prms){
     int j = 0;
     for(i = 0; i < agA -> natoms; i++){
         for(j = 0; j < agB -> natoms; j++){
-            // cal R 
-            //double X = agA->atoms[i].X - agB->atoms[j].X;
-            //double Y = agA->atoms[i].Y - agB->atoms[j].Y;
-            //double Z = agA->atoms[i].Z - agB->atoms[j].Z;
-            //double R = pow(cal_distance(agA,agB,i,j),3);
             total_energy += (prms -> chrgs[agA -> atoms[i].atom_typen])*(prms -> chrgs[agB -> atoms[j].atom_typen])/cal_distance(agA,agB,i,j);
-            //b += (prms -> chrgs[agA -> atoms[i].atom_typen])*(prms -> chrgs[agB -> atoms[j].atom_typen])*Y/R;
-            //c += (prms -> chrgs[agA -> atoms[i].atom_typen])*(prms -> chrgs[agB -> atoms[j].atom_typen])*Z/R;
-
 	}
     }
     return total_energy;
