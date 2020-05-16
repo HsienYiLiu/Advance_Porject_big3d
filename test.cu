@@ -1,4 +1,4 @@
-#include <curand_kernel.h>
+#include "device_launch_parameters.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
