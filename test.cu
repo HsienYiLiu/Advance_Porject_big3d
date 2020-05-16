@@ -34,8 +34,8 @@ char BoxTest ( int n, tPointd a, tPointd b );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
-int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
-__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out);
+//int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
+//__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out);
 //read_ori();
 int main(){
     int n, F, i;
