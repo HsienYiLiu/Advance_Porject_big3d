@@ -1,3 +1,4 @@
+#include <curand_kernel.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -30,9 +31,9 @@ void read_com(void);
 int ComputeBox( int F, tPointd bmin, tPointd bmax );
 int irint( double x );
 char BoxTest ( int n, tPointd a, tPointd b );
-int InBox( tPointd q, tPointd bmin, tPointd bmax );
-void RandomRay( tPointd ray, int radius );
-void AddVec( tPointd q, tPointd ray );
+__device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
+__device__ void RandomRay( tPointd ray, int radius );
+__device__ void AddVec( tPointd q, tPointd ray );
 __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V, int * out);
 //read_ori();
 int main(){
@@ -91,9 +92,17 @@ int main(){
     }*/
     return 0;
 }
+__global__ void check_each(int F,tPointd * ori_F,tPointd * r, tPointd *q){
+
+}
 
 __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V, int * out )
 {
+   //volatile bool *found = FALSE;
+   volatile __shared__ bool FoundIt;
+   // initialize shared status
+    FoundIt = false;
+   //__syncthreads();
    tPointd r;  /* Rayendpoint. */
    tPointd p,q;  /* Intersection point; not used. */
    int f, k = 0, crossings = 0;
@@ -104,18 +113,21 @@ __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius,
    q[1] = c_com_V[i][1];
    q[2] = c_com_V[i][2];
    /* If query point is outside bounding box, finished. */
-   if ( !InBox( q, *bmin, *bmax ) )
+   if ( !InBox( q, *bmin, *bmax ) ){
       out[i] = 3;
+      FoundIt = true;
+      printf("wpwowow %d\n", out[i]);
+   }
       //return 'o';
-   /*
+   
    LOOP:
-   while( k++ < F ) {
+   while( k++ < F && FoundIt == false) {
       crossings = 0;
   
       RandomRay( r, radius ); 
       AddVec( q, r ); // add the ray with the point to create end point
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
-  
+      /*
       for ( f = 0; f < F; f++ ) {  // Begin check each face 
          if ( BoxTest( f, q, r ) == '0' ) {
               out[i] = '0';
@@ -149,10 +161,10 @@ __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius,
          else 
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
 
-      } 
+      } */
       break;
 
-   }  */
+   }  
    printf( "Crossings = %d\n", crossings );
    /* q strictly interior to polyhedron iff an odd number of crossings. */
    if( ( crossings % 2 ) == 1 )
@@ -160,9 +172,10 @@ __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius,
       out[i] = 1;
    //else return 'o';
    else out[i] = 9;
+   free(r);
    printf("result -->  %d\n", out[i]);
 }
-int InBox( tPointd q, tPointd bmin, tPointd bmax )
+__device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
 {
   int i;
 
@@ -173,15 +186,21 @@ int InBox( tPointd q, tPointd bmin, tPointd bmax )
   return FALSE;
 }
 /* Return a random ray endpoint */
-void RandomRay( tPointd ray, int radius )
+__device__ void RandomRay( tPointd ray, int radius )
 {
   double x, y, z, w, t;
+  int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+  curandState state;
+  curand_init((unsigned long long)clock() + tId, 0, 0, &state);
 
+  double rand1 = curand_uniform_double(&state);
+  double rand2 = curand_uniform_double(&state);
   /* Generate a random point on a sphere of radius 1. */
   /* the sphere is sliced at z, and a random point at angle t
      generated on the circle of intersection. */
-  z = 2.0 * (double) rand() / MAX_INT - 1.0;
-  t = 2.0 * M_PI * (double) rand() / MAX_INT;
+  z = 2.0 * (double) 0 / MAX_INT - 1.0;
+  t = 2.0 * M_PI * (double) rand2 / MAX_INT;
+  printf("check %lf\n",rand1);
   w = sqrt( 1 - z*z );
   x = w * cos( t );
   y = w * sin( t );
@@ -192,7 +211,7 @@ void RandomRay( tPointd ray, int radius )
   
   /*printf( "RandomRay returns %6d %6d %6d\n", ray[X], ray[Y], ray[Z] );*/
 }
-void AddVec( tPointd q, tPointd ray )
+__device__ void AddVec( tPointd q, tPointd ray )
 {
   int i;
   
