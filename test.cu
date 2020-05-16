@@ -35,6 +35,7 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
+__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out);
 //read_ori();
 int main(){
     int n, F, i;
@@ -55,7 +56,7 @@ int main(){
         q[Y] = com_Vertices[counter][Y];
         q[Z] = com_Vertices[counter][Z];
         printf( "\n %d -------->q = %lf %lf %lf\n", counter, q[X], q[Y], q[Z] );
-        printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
+        //printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
         counter--;
     }
     return 0;
@@ -63,9 +64,9 @@ int main(){
 __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out)
 {
       
-      volatile __shared__ bool FoundIt;
+      //volatile __shared__ bool FoundIt;
       // initialize shared status
-      FoundIt = false;
+      //FoundIt = false;
       //__syncthreads();
       //tPointd r,p,q;  /* Intersection point; not used. */
       int f, k = 0, crossings = 0;
@@ -80,7 +81,7 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
       if(i < F){
          if ( !InBox( *q, *bmin, *bmax ) ){
               out[i] = 3;
-              FoundIt = true;
+              //FoundIt = true;
               printf("wpwowow %d\n", out[i]);
           }
         /*
@@ -122,20 +123,12 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
 
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
 {
-   //volatile bool *found = FALSE;
-   //volatile __shared__ bool FoundIt;
-   // initialize shared status
-   //FoundIt = false;
-   //__syncthreads();
-   tPointd r,p;  /* Intersection point; not used. */
-   //tPointd *ori_F,*ori_V;
+    tPointd r,p;  /* Intersection point; not used. */
     int f, k = 0, crossings = 0;
-   //int code = -1;
     int i = blockIdx.x;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_F,*ori_V,*final_r,*final_q;
     int *out,*result;
-    
-    //char out[counter];
+    printf("pppppp\n");
     //char result[counter];
     result = (int *)malloc(sizeof(int)*F);
     
@@ -160,8 +153,8 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
 
   // cudaMemcpy(result,out, sizeof(int)*counter, cudaMemcpyDeviceToHost);
    
-   LOOP:
-   while( k++ < F) {
+   //LOOP:
+   //while( k++ < F) {
       crossings = 0;
   
       RandomRay( r, radius ); 
@@ -172,9 +165,9 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q, out);     
       cudaMemcpy(result,out, sizeof(int)*DIM, cudaMemcpyDeviceToHost);
       
-      break;
+     // break;
 
-   }  
+   //}  
    /*printf( "Crossings = %d\n", crossings );
    // q strictly interior to polyhedron iff an odd number of crossings.
    if( ( crossings % 2 ) == 1 )
@@ -183,7 +176,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
    //else return 'o';
    else out[i] = 9;
    */
-   printf("result -->  %d\n", result[i]);
+   //printf("result -->  %d\n", result[i]);
    free(result);
    cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
