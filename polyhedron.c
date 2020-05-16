@@ -161,7 +161,7 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     RandomRay( r, radius );
     printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
    LOOP:
-   /*
+   
    while( k++ < F ) {
       crossings = 0;
   
@@ -174,6 +174,7 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
               code = '0';
               printf("BoxTest = 0!\n");
          }
+         /*
          else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
@@ -199,13 +200,13 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
 
          else 
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
-      
+      `*/
       }  
 
       
       break;
 
-   }*/
+   }
  
    printf( "Crossings = %d\n", crossings );
    /* q strictly interior to polyhedron iff an odd number of crossings. */
@@ -641,7 +642,7 @@ char BoxTest ( int n, tPointd a, tPointd b )
 {
    int i; /* Coordinate index */
    int w;
-
+   printf("box %d\n", Box[1][0][0]);
    for ( i=0; i < DIM; i++ ) {
        w = Box[ n ][0][i]; /* min: lower left */
        if ( ((int)a[i] < w ) && ((int)b[i] < w) ) return '0';

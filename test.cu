@@ -76,18 +76,18 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
         //  printf("DDDDDD\n");
           printf("Box %d\n",Box[1][2]);
       //}
-      if(i < F){
+      //if(i < F){
          //if ( !InBox( *q, *bmin, *bmax ) ){
          //     out[i] = 3;
          //     FoundIt = true;
          //     printf("wpwowow %d\n", out[i]);
          // }
         
-         if ( BoxTest( f, *q, *r, Box ) == '0' && FoundIt == false) {
+         /*if ( BoxTest( f, *q, *r, Box ) == '0' && FoundIt == false) {
               out[i] = 4;
               //code = '0';
               printf("BoxTest = 0!\n");
-         }/*
+         }*//*
          //else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
@@ -116,7 +116,7 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
 
        */
-       }
+       //}
 }
 
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
@@ -124,7 +124,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     tPointd r,p;  /* Intersection point; not used. */
     int f, k = 0, crossings = 0;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_F,*ori_V,*final_r,*final_q;
-    tPointi *cu_box;
+    tPointi **cu_box;
     int *out,*result;
     printf("pppppp\n");
     //char result[counter];
@@ -138,7 +138,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMalloc(&d_bmin,sizeof(tPointd)*3);
     cudaMalloc(&final_r,sizeof(tPointd)*3);
     cudaMalloc(&final_q,sizeof(tPointd)*3);
-    cudaMalloc(&cu_box,sizeof(tPointi)*F*2);
+    cudaMalloc(&cu_box,sizeof(tPointi*)*F*2);
     cudaMalloc(&out,sizeof(int)*F);
 
     cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
@@ -147,7 +147,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(final_q, q, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
-    cudaMemcpy(cu_box, Box, sizeof(tPointi)*F*2, cudaMemcpyHostToDevice);
+    cudaMemcpy(cu_box, Box, sizeof(tPointi*)*F*2, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
 
     //printf("Box test %d\n",Box[0][0][0]);
