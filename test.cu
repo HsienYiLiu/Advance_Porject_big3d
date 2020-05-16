@@ -187,7 +187,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
    free(result);
    cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
-   cudaFree(final_q);cudaFree(out);cudaFree(result);
+   cudaFree(final_q);cudaFree(out);
    return 0;
 }
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
