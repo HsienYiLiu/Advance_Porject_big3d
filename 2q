@@ -69,15 +69,21 @@ int main(){
     cudaMemcpy(out, result, sizeof(int)*counter, cudaMemcpyHostToDevice);
     InPolyhedron<<<counter, 1>>>(n,d_bmin, d_bmax,radius,c_com_V, out);
     printf("111111\n");
-    cudaMemcpy(result,out, sizeof(int)*counter, cudaMemcpyDeviceToHost);
+    cudaMemcpy(result,out, sizeof(char)*counter, cudaMemcpyDeviceToHost);
     printf("2222222\n");
     printf("resultFFFF %d\n",result[1]);
 
     cudaFree(d_bmax);
+    printf("3\n");
     cudaFree(d_bmin);
+    printf("4\n");
     cudaFree(c_com_V);
+    printf("5\n");
     cudaFree(out);
+    printf("6\n");
+    printf("2222222\n");
     free(result);   
+    printf("2222222\n");
 
     //InPolyhedron( F, q, bmin, bmax, radius )
     /*
@@ -104,8 +110,8 @@ __global__ void InPolyhedron( int F,  tPointd * bmin, tPointd * bmax,int radius,
    q[1] = c_com_V[i][1];
    q[2] = c_com_V[i][2];
    /* If query point is outside bounding box, finished. */
-   if ( !InBox( q, *bmin, *bmax ) )
-      out[i] = 3;
+   //if ( !InBox( q, bmin, bmax ) )
+      //out[i] = 'o';
       //return 'o';
    /*
    LOOP:
