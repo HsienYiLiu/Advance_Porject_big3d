@@ -30,11 +30,11 @@ void read_ori(void);
 void read_com(void);
 int ComputeBox( int F, tPointd bmin, tPointd bmax );
 int irint( double x );
-char BoxTest ( int n, tPointd a, tPointd b );
+__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi* Box );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
-//int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
+int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
 //__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out);
 //read_ori();
 int main(){
@@ -56,40 +56,38 @@ int main(){
         q[Y] = com_Vertices[counter][Y];
         q[Z] = com_Vertices[counter][Z];
         printf( "\n %d -------->q = %lf %lf %lf\n", counter, q[X], q[Y], q[Z] );
-        //printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
+        printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
         counter--;
     }
     return 0;
 }
-__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out)
+__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
 {
       
-      //volatile __shared__ bool FoundIt;
+      volatile __shared__ bool FoundIt;
       // initialize shared status
-      //FoundIt = false;
-      //__syncthreads();
-      //tPointd r,p,q;  /* Intersection point; not used. */
+      FoundIt = false;
+      __syncthreads();
       int f, k = 0, crossings = 0;
       int code = -1;
       int i = blockIdx.x;
       crossings = 0;
-      //q[0] = c_com_V[i][0];
-      //q[1] = c_com_V[i][1];
-      //q[2] = c_com_V[i][2];
-      //RandomRay( r, radius );
-      //AddVec( q, r );
+      //for ( int j = 0; i < DIM; i++ ) {
+        //  printf("DDDDDD\n");
+          printf("Box %d\n",Box[1][2]);
+      //}
       if(i < F){
-         if ( !InBox( *q, *bmin, *bmax ) ){
-              out[i] = 3;
-              //FoundIt = true;
-              printf("wpwowow %d\n", out[i]);
-          }
-        /*
-         if ( BoxTest( f, q, r ) == '0' ) {
-              out[i] = '0';
+         //if ( !InBox( *q, *bmin, *bmax ) ){
+         //     out[i] = 3;
+         //     FoundIt = true;
+         //     printf("wpwowow %d\n", out[i]);
+         // }
+        
+         if ( BoxTest( f, *q, *r, Box ) == '0' && FoundIt == false) {
+              out[i] = 4;
               //code = '0';
               printf("BoxTest = 0!\n");
-         }
+         }/*
          //else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
@@ -125,8 +123,8 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
 {
     tPointd r,p;  /* Intersection point; not used. */
     int f, k = 0, crossings = 0;
-    int i = blockIdx.x;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_F,*ori_V,*final_r,*final_q;
+    tPointi *cu_box;
     int *out,*result;
     printf("pppppp\n");
     //char result[counter];
@@ -140,6 +138,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMalloc(&d_bmin,sizeof(tPointd)*3);
     cudaMalloc(&final_r,sizeof(tPointd)*3);
     cudaMalloc(&final_q,sizeof(tPointd)*3);
+    cudaMalloc(&cu_box,sizeof(tPointi)*F*2);
     cudaMalloc(&out,sizeof(int)*F);
 
     cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
@@ -148,10 +147,10 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(final_q, q, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
+    cudaMemcpy(cu_box, Box, sizeof(tPointi)*F*2, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
 
-
-  // cudaMemcpy(result,out, sizeof(int)*counter, cudaMemcpyDeviceToHost);
+    //printf("Box test %d\n",Box[0][0][0]);
    
    //LOOP:
    //while( k++ < F) {
@@ -162,7 +161,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
       
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
       cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
-      check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q, out);     
+      check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
       cudaMemcpy(result,out, sizeof(int)*DIM, cudaMemcpyDeviceToHost);
       
      // break;
@@ -226,17 +225,17 @@ void AddVec( tPointd q, tPointd ray )
   for( i = 0; i < DIM; i++ )
     ray[i] = q[i] + ray[i];
 }
-char BoxTest ( int n, tPointd a, tPointd b )
+__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi* Box )
 {
    int i; /* Coordinate index */
    int w;
-
-   for ( i=0; i < DIM; i++ ) {
-       w = Box[ n ][0][i]; /* min: lower left */
+   //printf(" Box %d\n",Box[1][1][1]);
+   /*for ( i=0; i < DIM; i++ ) {
+       w = Box[ n ][0][i]; //min: lower left 
        if ( ((int)a[i] < w ) && ((int)b[i] < w) ) return '0';
-       w = Box[ n ][1][i]; /* max: upper right */
+       w = Box[ n ][1][i]; // max: upper right 
        if ( ((int)a[i] > w) && ((int)b[i] > w) ) return '0';
-   }
+   }*/
    return '?';
 }
 __global__ void cal(tPointd *bmin, tPointd *bmax,tPointd *V,int F){
