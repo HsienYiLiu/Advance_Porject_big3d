@@ -32,8 +32,8 @@ int ComputeBox( int F, tPointd bmin, tPointd bmax );
 int irint( double x );
 char BoxTest ( int n, tPointd a, tPointd b );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
-__device__ void RandomRay( tPointd ray, int radius );
-__device__ void AddVec( tPointd q, tPointd ray );
+void RandomRay( tPointd ray, int radius );
+void AddVec( tPointd q, tPointd ray );
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius );
 //read_ori();
 int main(){
@@ -60,26 +60,25 @@ int main(){
     }
     return 0;
 }
-__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,,tPointd * q, int * out)
+__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out)
 {
       
       volatile __shared__ bool FoundIt;
       // initialize shared status
       FoundIt = false;
       //__syncthreads();
-      tPointd r,p,q;  /* Intersection point; not used. */
-      tPointd *ori_F,*ori_V;
+      //tPointd r,p,q;  /* Intersection point; not used. */
       int f, k = 0, crossings = 0;
       int code = -1;
       int i = blockIdx.x;
       crossings = 0;
-      q[0] = c_com_V[i][0];
-      q[1] = c_com_V[i][1];
-      q[2] = c_com_V[i][2];
-      RandomRay( r, radius );
-      AddVec( q, r );
+      //q[0] = c_com_V[i][0];
+      //q[1] = c_com_V[i][1];
+      //q[2] = c_com_V[i][2];
+      //RandomRay( r, radius );
+      //AddVec( q, r );
       if(i < F){
-         if ( !InBox( q, *bmin, *bmax ) ){
+         if ( !InBox( *q, *bmin, *bmax ) ){
               out[i] = 3;
               FoundIt = true;
               printf("wpwowow %d\n", out[i]);
@@ -128,9 +127,9 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
    // initialize shared status
    //FoundIt = false;
    //__syncthreads();
-   tPointd r,p,q;  /* Intersection point; not used. */
+   tPointd r,p;  /* Intersection point; not used. */
    //tPointd *ori_F,*ori_V;
-   //int f, k = 0, crossings = 0;
+    int f, k = 0, crossings = 0;
    //int code = -1;
     int i = blockIdx.x;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_F,*ori_V,*final_r,*final_q;
@@ -148,7 +147,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMalloc(&d_bmin,sizeof(tPointd)*3);
     cudaMalloc(&final_r,sizeof(tPointd)*3);
     cudaMalloc(&final_q,sizeof(tPointd)*3);
-    cudaMalloc(&out,sizeof(int)*F;
+    cudaMalloc(&out,sizeof(int)*F);
 
     cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
     cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
@@ -156,22 +155,22 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(final_q, q, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
-    cudaMemcpy(out, result, sizeof(int)*counter, cudaMemcpyHostToDevice);
+    cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
 
 
   // cudaMemcpy(result,out, sizeof(int)*counter, cudaMemcpyDeviceToHost);
    
    LOOP:
-   while( k++ < F && FoundIt == false) {
+   while( k++ < F) {
       crossings = 0;
   
       RandomRay( r, radius ); 
       AddVec( q, r ); // add the ray with the point to create end point
       
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
-      cudaMemcpy(final_r, r, sizeof(tPointd)*counter, cudaMemcpyHostToDevice);
+      cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q, out);     
-      cudaMemcpy(result,out, sizeof(int)*counter, cudaMemcpyDeviceToHost);
+      cudaMemcpy(result,out, sizeof(int)*DIM, cudaMemcpyDeviceToHost);
       
       break;
 
@@ -202,21 +201,21 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
   return FALSE;
 }
 /* Return a random ray endpoint */
-__device__ void RandomRay( tPointd ray, int radius )
+ void RandomRay( tPointd ray, int radius )
 {
   double x, y, z, w, t;
-  int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+  /*int tId = threadIdx.x + (blockIdx.x * blockDim.x);
   curandState state;
   curand_init((unsigned long long)clock() + tId, 0, 0, &state);
 
   double rand1 = curand_uniform_double(&state);
-  double rand2 = curand_uniform_double(&state);
+  double rand2 = curand_uniform_double(&state);*/
   /* Generate a random point on a sphere of radius 1. */
   /* the sphere is sliced at z, and a random point at angle t
      generated on the circle of intersection. */
-  z = 2.0 * (double) 0 / MAX_INT - 1.0;
-  t = 2.0 * M_PI * (double) rand2 / MAX_INT;
-  printf("check %lf\n",rand1);
+  z = 2.0 * (double) rand() / MAX_INT - 1.0;
+  t = 2.0 * M_PI * (double) rand() / MAX_INT;
+  //printf("check %lf\n",rand1);
   w = sqrt( 1 - z*z );
   x = w * cos( t );
   y = w * sin( t );
@@ -227,7 +226,7 @@ __device__ void RandomRay( tPointd ray, int radius )
   
   /*printf( "RandomRay returns %6d %6d %6d\n", ray[X], ray[Y], ray[Z] );*/
 }
-__device__ void AddVec( tPointd q, tPointd ray )
+void AddVec( tPointd q, tPointd ray )
 {
   int i;
   
