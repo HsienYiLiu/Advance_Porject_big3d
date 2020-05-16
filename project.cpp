@@ -64,6 +64,8 @@ int main(int argc, char* argv[]) {
   p.y = std::strtod(argv[2], &end);
   p.z = std::strtod(argv[3], &end);
 
+
+
   std::vector<Face> cube{ // faces with 4 points, last point is ignored
     Face{{Point{0,0,0}, Point{1,0,0}, Point{1,0,1}, Point{0,0,1}}}, // front
     Face{{Point{0,1,0}, Point{0,1,1}, Point{1,1,1}, Point{1,1,0}}}, // back

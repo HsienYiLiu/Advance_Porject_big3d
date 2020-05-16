@@ -103,10 +103,10 @@ int main (int argc, char* argv[])
 	struct atomgrp* agA = read_file_atomgrp (rec_ifile, prms);
 	struct atomgrp* agB = read_file_atomgrp (lig_ifile, prms);
 
-        printf("\n");
+    printf("\n");
 	printf("Q1-e: Tabulate the values of electrostatic energy while moving one of the protein along center of mass\n");
-        printf("Showing the 1-e results\n");
-        moving_along_center(agA, agB, prms);
+    printf("Showing the 1-e results\n");
+    moving_along_center(agA, agB, prms);
 	printf("\n");
 	printf("Q2-c: Write Metropolis Monte Carlo search for two proteins.\n");
 	printf("Showing the 2-c results first\n");
@@ -114,8 +114,8 @@ int main (int argc, char* argv[])
 	printf("Output 2-c result as 10 files, using pymol to see the result...\n");
 	printf("\n");
 	struct tvector* temp_tv = (struct tvector*) mymalloc (sizeof (struct tvector));
-        struct tvector* com_A = center_of_mass(agA);
-        struct tvector* com_B = center_of_mass(agB);
+    struct tvector* com_A = center_of_mass(agA);
+    struct tvector* com_B = center_of_mass(agB);
 	// Code for 1-a
 	temp_tv->X = 0.5*(com_A->X - com_B->X);
 	temp_tv->Y = 0.5*(com_A->Y - com_B->Y);
@@ -125,91 +125,60 @@ int main (int argc, char* argv[])
 	char* current_ofile = (char*) mymalloc (100 * sizeof (char)); 
 	sprintf (current_ofile, "1-a.ms");
 	fprint_file_atomgrp(current_ofile, agA_moved, prms);
-	printf("Q1-a: Translate one of the proteins along the vector connecting center of masses of those proteins\n");
-	printf("1-a will be output as a 1-a.ms file \n");
-	srand(time(NULL));
-	printf("\n");
-	printf("Q1-b: Write a function which calculates coulombic electrostatic energy between two proteins\n");
-	printf("Answer for the 1-b : %.4f\n", cal_energy(agA,agB, prms));
-	printf("\n");
-	// Evaluate E
-	// Call for the 1-c
-	printf("Q1-c: Write a function which calculates array of gradients (forces) of the electrostatic energy from one protein to another protein\n");
 	cal_gradients(agA,agB, prms);
-	printf("\n");
-	printf("Q1-d: Check that gradient calculation using analytical formula \n");
 	check_gradients(agA,agB, prms,0.001);
-	printf("\n");
-	printf("\n");
-	printf("Q1-f: Plot the values of energy as function of distance\n");
-	printf("The result of 1-f will be shown in 1-f.jpg\n");
-        printf("\n");
-	printf("Q2-a: Calculate PI using Monte Carlo (by integrating area of the circle) \n");
 	Cal_PT_MC();
-        printf("\n");
-	printf("Q2-b: Use metropolis monte carlo to perfrom the search\n");
-	Cal_MIN_CV();
-	printf("\n");
+    Cal_MIN_CV();
 	return EXIT_SUCCESS;
 }
 //2-c
 void mmc_moving_protein(struct atomgrp* agA, struct atomgrp* agB,struct prms* prms){
     struct tvector* com_A = center_of_mass(agA);
-    srand(2020);
-    struct atomgrp* ag_min;
-    double min = 10000000;
-    double temp,next;
-    double  kt = 2;
+    struct atomgrp* atgroup_min;
+    double min = 1000;
+    double temp;
+    double  kt = 1;
     int i = 0;
     
-    while(i < 10001){
-	com_A = center_of_mass(agA);
-	double ori = complex_energy(agA, agB, prms);
-	// rotational and trans atmo group
-        struct atomgrp* agA_moved = copy_atomgrp(agA);
-	perturb_atomgrp(agA, agA_moved, 4, PI/10, com_A);
-	next = complex_energy(agA_moved, agB, prms);
-	temp = next - ori;
-	if(next < ori){
-	    agA = agA_moved; 
-            //find min
-            if(next < min){
-                min = next;
-                ag_min = agA_moved;
-                printf("2-C is running and find the new min with --> %lf\n",min);
-            }  
-	}else{
-	    double p = (double)rand()/RAND_MAX*1-0;
-            if(p < exp(-(temp/kt))){
-               agA = agA_moved; 
-            }else{
-               agA = agA;
-            }
-	}
-	free(com_A);
-	kt = kt - 0.0001;
+    while(i < 1001){
+		com_A = center_of_mass(agA);
+		double ori = complex_energy(agA, agB, prms);
+		// rotational and trans atmo group
+		struct atomgrp* agA_moved = copy_atomgrp(agA);
+		perturb_atomgrp(agA, agA_moved, 2, PI/18, com_A);
+		temp = complex_energy(agA_moved, agB, prms); - ori;
+		if(complex_energy(agA_moved, agB, prms); < ori){
+			agA = agA_moved; 
+				//find min
+		}else{
+			if(complex_energy(agA_moved, agB, prms) < min){
+				min = complex_energy(agA_moved, agB, prms);
+				atgroup_min = agA_moved;
+				printf("2-C is running and find the new min with --> %lf\n",min);
+			}  
+			double p = (double)rand()/RAND_MAX*1-0;
+				if(p < exp(-(temp/kt))){
+				    agA = agA_moved; 
+				}else{
+				    agA = agA;
+				}
+		}
+		free(com_A);
 	i++;
-	// Out put the file
-	if(i % 1000 == 0){
-	    char* current_ofile = (char*) mymalloc (100 * sizeof (char));
-            sprintf (current_ofile, "test%d.ms", i/1000);
-            fprint_file_atomgrp(current_ofile, agA, prms);
-	}
     }
-    printf("2-c finally result for complex function:  %f\n",complex_energy(ag_min, agB, prms));
     //return temp_tv;
 }
 //2-b
 double Cal_MIN_CV(){
-    double min = 10000000;
+    double min = 1000;
     double min_x;
     //double upper = 0.5;
     //double lower = -0.5;
     double temp,x_next;
     double kt = 1;
-    double x = -5.0; // start point from -5
+    double x = -4.0; 
     int i = 0;
-    while(i < 100001){
+    while(i < 10001){
         double delta = ((double)rand()/RAND_MAX*2.0-1.0)/10;
 	x_next = x + delta;
 	temp = b2_formula(x_next) - b2_formula(x);

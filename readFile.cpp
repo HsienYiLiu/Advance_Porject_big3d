@@ -37,6 +37,9 @@ int main()
   while(getline(infile, line))
   {
     count++;
+    if(count == 1){
+        cout<< infile << endl;
+    }
     istringstream iss(line);
     float a, b,c,d;
     int ia,ib,ic,id;

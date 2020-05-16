@@ -31,7 +31,7 @@ typedef enum { FALSE, TRUE } bool;
 #define DIM 3                  /* Dimension of points */
 typedef int    tPointi[DIM];   /* Type integer point */
 typedef double tPointd[DIM];   /* Type double point */
-#define PMAX 10000             /* Max # of pts */
+#define PMAX 100000             /* Max # of pts */
 tPointd Vertices[PMAX];        /* All the points */
 tPointi Faces[PMAX];           /* Each triangle face is 3 indices */
 tPointd com_Vertices[PMAX];    
@@ -73,6 +73,7 @@ void  read_com(void);
 
 
 int main(){
+    time_t begin = time(NULL);
     int n, F, i;
     tPointd q, bmin, bmax;
     int radius;
@@ -92,7 +93,7 @@ int main(){
     radius = ComputeBox( n, bmin, bmax );
     printf("radius=%d\n", radius);
     int counter = com_vertices - 1;
-    time_t begin = time(NULL);
+    
     while( counter >= 0 ) {
         q[X] = com_Vertices[counter][X];
         q[Y] = com_Vertices[counter][Y];
@@ -101,21 +102,22 @@ int main(){
         printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
         counter--;
     }
+    /*
+
     time_t end = time(NULL); 
     printf("Time elpased is %ld seconds \n", (end - begin));
-    /* Permutation two points to test 
-       if they have intersection with outer polyhedron
-    */
     for(int i = 0; i < com_vertices-1; i++){
        for(int j = i+1; j < com_vertices; j++){
           if(CheckAllContain(F,com_Vertices[i],com_Vertices[j]) == 'T')
               continue;
-          else
+          else{
               printf("Inner polyhedron doesn't fully contain in the outer polyhedron"); 
-              EXIT_SUCCESS;       
+              exit(EXIT_SUCCESS); 
+          }    
        }
     }
     printf("Inner polyhedron fully contains in the outer polyhedron");
+    */
 }
 
 
@@ -154,10 +156,12 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
    char code = '?';
  
    /* If query point is outside bounding box, finished. */
-   if ( !InBox( q, bmin, bmax ) )
-      return 'o';
-  
+   //if ( !InBox( q, bmin, bmax ) )
+     // return 'o';
+    RandomRay( r, radius );
+    printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
    LOOP:
+   /*
    while( k++ < F ) {
       crossings = 0;
   
@@ -165,7 +169,7 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
       AddVec( q, r ); // add the ray with the point to create end point
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
   
-      for ( f = 0; f < F; f++ ) {  /* Begin check each face */
+      for ( f = 0; f < F; f++ ) { 
          if ( BoxTest( f, q, r ) == '0' ) {
               code = '0';
               printf("BoxTest = 0!\n");
@@ -173,35 +177,35 @@ char InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
          else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
-         /* If ray is degenerate, then goto outer while to generate another. */
+         
          if ( code == 'p' || code == 'v' || code == 'e' ) {
             printf("Degenerate ray\n");
             goto LOOP;
          }
    
-         /* If ray hits face at interior point, increment crossings. */
+         
          else if ( code == 'f' ) {
             crossings++;
             printf( "crossings = %d\n", crossings );
          }
 
-         /* If query endpoint q sits on a V/E/F, return that code. */
+         
          else if ( code == 'V' || code == 'E' || code == 'F' )
             return( code );
 
-         /* If ray misses triangle, do nothing. */
+         
          else if ( code == '0' )
             ;
 
          else 
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
+      
+      }  
 
-      } /* End check each face */
-
-      /* No degeneracies encountered: ray is generic, so finished. */
+      
       break;
 
-   } /* End while loop */
+   }*/
  
    printf( "Crossings = %d\n", crossings );
    /* q strictly interior to polyhedron iff an odd number of crossings. */
@@ -214,15 +218,23 @@ int ComputeBox( int F, tPointd bmin, tPointd bmax )
 {
   int i, j, k;
   double radius;
-  
-  for( i = 0; i < F; i++ )
+  printf("BMIN 1 -> %d\n",F);
+  for( i = 0; i < F; i++ ){
     for( j = 0; j < DIM; j++ ) {
-      if( Vertices[i][j] < bmin[j] )
+      if( Vertices[i][j] < bmin[j] ){
 	      bmin[j] = Vertices[i][j];
-      if( Vertices[i][j] > bmax[j] ) 
+      }
+      if( Vertices[i][j] > bmax[j] ) {
 	      bmax[j] = Vertices[i][j];
+           
+      }
+      //printf("i --> %d, j --> %d \n",i,j);
+    
     }
-  
+  }
+  printf("bmax %lf, bmin %lf \n",bmax[X],bmin[X]);
+  printf("bmax %lf, bmin %lf \n",bmax[Y],bmin[Y]); 
+  printf("bmax %lf, bmin %lf \n",bmax[Z],bmin[Z]); 
   radius = sqrt( pow( (double)(bmax[X] - bmin[X]), 2.0 ) +
                  pow( (double)(bmax[Y] - bmin[Y]), 2.0 ) +
                  pow( (double)(bmax[Z] - bmin[Z]), 2.0 ) );
@@ -241,6 +253,7 @@ void RandomRay( tPointd ray, int radius )
      generated on the circle of intersection. */
   z = 2.0 * (double) rand() / MAX_INT - 1.0;
   t = 2.0 * M_PI * (double) rand() / MAX_INT;
+  printf("rand %lf\n",z);
   w = sqrt( 1 - z*z );
   x = w * cos( t );
   y = w * sin( t );
@@ -653,7 +666,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("big.off", "r");
+    fp = fopen("0.off", "r");
     int i = 0;
     int j,k,n,w;
     
