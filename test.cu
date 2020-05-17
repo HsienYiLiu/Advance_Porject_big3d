@@ -72,22 +72,23 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
       int code = -1;
       int i = blockIdx.x;
       crossings = 0;
-      //printf("BOXXXXXXX %d\n",Box[0][0]);
+      //f = &Box[0][0][0];
       if(i < F){
          //if ( !InBox( *q, *bmin, *bmax ) ){
          //     out[i] = 3;
          //     FoundIt = true;
          //     printf("wpwowow %d\n", out[i]);
          // }
-        
-         if ( BoxTest( f, *q, *r,*Box ) == '0' && FoundIt == false) {
+         if ( BoxTest( f, *q, *r, *Box ) == '0' && FoundIt == false) {
+              
+              //printf("XXXXXXXXXXX \n");       
               out[i] = 4;
               //code = '0';
               printf("BoxTest = 0!\n");
-         }/*
-         //else code = SegTriInt( Faces[f], q, r, p );
+         }
+         else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
-
+         /* 
          //If ray is degenerate, then goto outer while to generate another.
          if ( code == 'p' || code == 'v' || code == 'e' ) {
             printf("Degenerate ray\n");
@@ -112,8 +113,8 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
          else 
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
 
-       
-       }*/
+       */
+       }
 }
 
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
@@ -145,10 +146,8 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMemcpy(final_q, q, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
-    printf("Fdddd\n");
 
-    //printf("Box test %d\n",cu_box[0][0]);
-    printf("Fdddd\n");
+    //printf("Box test %d\n",cu_box[0][0][0]);
    
    //LOOP:
    //while( k++ < F) {
@@ -177,7 +176,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
    free(result);
    cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
-   cudaFree(final_q);cudaFree(out);
+   cudaFree(final_q);cudaFree(out);cudaFree(cu_box);
    return 0;
 }
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
@@ -223,17 +222,17 @@ void AddVec( tPointd q, tPointd ray )
   for( i = 0; i < DIM; i++ )
     ray[i] = q[i] + ray[i];
 }
-__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box )
+__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box)
 {
    int i; /* Coordinate index */
    int w;
-   //printf(" Box %d\n", Box[1][1][1]);
-   /*for ( i=0; i < DIM; i++ ) {
-       w = &Box[ n ][0][i]; //min: lower left 
+   //printf(" Box %d\n", w);
+   for ( i=0; i < DIM; i++ ) {
+       w = Box[n]; //min: lower left 
        if ( ((int)a[i] < w ) && ((int)b[i] < w) ) return '0';
-       w = &Box[ n ][1][i]; // max: upper right 
+       w = Box[n]; // max: upper right 
        if ( ((int)a[i] > w) && ((int)b[i] > w) ) return '0';
-   }*/
+   }
    return '?';
 }
 __global__ void cal(tPointd *bmin, tPointd *bmax,tPointd *V,int F){
