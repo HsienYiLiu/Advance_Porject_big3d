@@ -30,7 +30,7 @@ void read_ori(void);
 void read_com(void);
 int ComputeBox( int F, tPointd bmin, tPointd bmax );
 int irint( double x );
-__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi* Box );
+__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
@@ -72,22 +72,19 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
       int code = -1;
       int i = blockIdx.x;
       crossings = 0;
-      //for ( int j = 0; i < DIM; i++ ) {
-        //  printf("DDDDDD\n");
-          printf("Box %d\n",Box[1][2]);
-      //}
-      //if(i < F){
+      //printf("BOXXXXXXX %d\n",Box[0][0]);
+      if(i < F){
          //if ( !InBox( *q, *bmin, *bmax ) ){
          //     out[i] = 3;
          //     FoundIt = true;
          //     printf("wpwowow %d\n", out[i]);
          // }
         
-         /*if ( BoxTest( f, *q, *r, Box ) == '0' && FoundIt == false) {
+         if ( BoxTest( f, *q, *r,*Box ) == '0' && FoundIt == false) {
               out[i] = 4;
               //code = '0';
               printf("BoxTest = 0!\n");
-         }*//*
+         }/*
          //else code = SegTriInt( Faces[f], q, r, p );
          printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
 
@@ -115,8 +112,8 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
          else 
             fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
 
-       */
-       //}
+       
+       }*/
 }
 
 int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
@@ -124,7 +121,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     tPointd r,p;  /* Intersection point; not used. */
     int f, k = 0, crossings = 0;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_F,*ori_V,*final_r,*final_q;
-    tPointi **cu_box;
+    tPointi *cu_box;
     int *out,*result;
     printf("pppppp\n");
     //char result[counter];
@@ -137,9 +134,8 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMalloc(&d_bmax,sizeof(tPointd)*3);
     cudaMalloc(&d_bmin,sizeof(tPointd)*3);
     cudaMalloc(&final_r,sizeof(tPointd)*3);
-    cudaMalloc(&final_q,sizeof(tPointd)*3);
-    cudaMalloc(&cu_box,sizeof(tPointi*)*F*2);
-    cudaMalloc(&out,sizeof(int)*F);
+    cudaMalloc(&final_q,sizeof(tPointd)*3); 
+    cudaMalloc(&cu_box,sizeof(tPointi)*2*F);
 
     cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
     cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
@@ -147,10 +143,12 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
     cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(final_q, q, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
-    cudaMemcpy(cu_box, Box, sizeof(tPointi*)*F*2, cudaMemcpyHostToDevice);
+    cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
+    printf("Fdddd\n");
 
-    //printf("Box test %d\n",Box[0][0][0]);
+    //printf("Box test %d\n",cu_box[0][0]);
+    printf("Fdddd\n");
    
    //LOOP:
    //while( k++ < F) {
@@ -162,7 +160,7 @@ int InPolyhedron( int F, tPointd q, tPointd bmin, tPointd bmax, int radius )
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
       cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
-      cudaMemcpy(result,out, sizeof(int)*DIM, cudaMemcpyDeviceToHost);
+      cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
       
      // break;
 
@@ -225,15 +223,15 @@ void AddVec( tPointd q, tPointd ray )
   for( i = 0; i < DIM; i++ )
     ray[i] = q[i] + ray[i];
 }
-__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi* Box )
+__device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box )
 {
    int i; /* Coordinate index */
    int w;
-   //printf(" Box %d\n",Box[1][1][1]);
+   //printf(" Box %d\n", Box[1][1][1]);
    /*for ( i=0; i < DIM; i++ ) {
-       w = Box[ n ][0][i]; //min: lower left 
+       w = &Box[ n ][0][i]; //min: lower left 
        if ( ((int)a[i] < w ) && ((int)b[i] < w) ) return '0';
-       w = Box[ n ][1][i]; // max: upper right 
+       w = &Box[ n ][1][i]; // max: upper right 
        if ( ((int)a[i] > w) && ((int)b[i] > w) ) return '0';
    }*/
    return '?';
