@@ -103,7 +103,7 @@ __device__ int SegPlaneInt(double D,double denom, double num, tPointd q, tPointd
     }
     else
        t = num / denom;
-    printf("SegPlaneInt: t=%lf \n", t );
+    //printf("SegPlaneInt: t=%lf \n", t );
     
     /*for( i = 0; i < DIM; i++ ){
        p[i] = q[i] + t * ( r[i] - q[i] );
@@ -259,27 +259,27 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
       int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
       t = num / denom;
 
-      printf("SegPlaneInt: %d\n", tmp_code );      
+      //printf("SegPlaneInt: %d\n", tmp_code );      
       //f = &Box[0][0][0];
-      tmp_code = 1;
+      //tmp_code = 1;
       if(i < F){
-         //if ( !InBox( *q, *bmin, *bmax ) ){
-         //     out[i] = 3;
-         //     FoundIt = true;
-         //     printf("wpwowow %d\n", out[i]);
-         // }
-         if ( tmp_code != 1 && BoxTest( f, *q, *r, *Box ) == '0' && FoundIt == false) {
-              
-              out[i] = 4;
-              //code = '0';
-              printf("BoxTest = 0!\n");
+         if ( !InBox( *q, *bmin, *bmax ) ){
+              out[i] = 0;
+              FoundIt = true;
+              //printf("wpwowow %d\n", out[i]);
          }
-         else{
+         if (BoxTest( f, *q, *r, *Box ) == '0' && FoundIt == false) {
+              
+              out[i] = 0;
+              FoundIt = true;
+              //printf("BoxTest = 0!\n");
+         }
+         else if(FoundIt == false){
              if(tmp_code == 0){
-                 out[i] = 0;
-                 FoundIt == true;
+                 tmp_code = 0;
+                 //FoundIt == true;
              }
-             else if(tmp_code == 8){
+             if(tmp_code == 8){
                  tPointd pp,Tp[3];     // projected T: three new vertices 
                  //t = num / denom;
                  
@@ -299,8 +299,8 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
                  int area0 = AreaSign( pp, Tp[0], Tp[1] );
                  int area1 = AreaSign( pp, Tp[1], Tp[2] );
                  int area2 = AreaSign( pp, Tp[2], Tp[0] );
-                 out[i] = InTri2D(  area0, area1, area2 );
-                 FoundIt == true;
+                 tmp_code = InTri2D(  area0, area1, area2 );
+                 //FoundIt == true;
                  //printf("areaaa %d\n", out[i]);
                  //code = InTri2D( Tp, pp );
              }
@@ -324,13 +324,13 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
                  int area0 = AreaSign( pp, Tp[0], Tp[1] );
                  int area1 = AreaSign( pp, Tp[1], Tp[2] );
                  int area2 = AreaSign( pp, Tp[2], Tp[0] );
-                 out[i] = InTri2D(  area0, area1, area2 );
-                 FoundIt == true;
+                 tmp_code = InTri2D(  area0, area1, area2 );
+                 //FoundIt == true;
                  //printf("areaaa %d\n", out[i]);
                  //code = InTri2D( Tp, pp );
-             }else if(tmp_code == 10){
-                 out[i] = 10;
-                 FoundIt == true;
+             //}else if(tmp_code == 10){
+                 //out[i] = 10;
+                 //FoundIt == true;
              }else if(tmp_code == 1){
                  int vol0, vol1, vol2;
                  vol0 = VolumeSign( q[0], ori_V[ori_F[i][0] ], ori_V[ori_F[i][1] ], r[0] );
@@ -338,43 +338,49 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
                  vol2 = VolumeSign( q[0], ori_V[ori_F[i][2] ], ori_V[ori_F[i][0] ], r[0] );
                  //printf( "SegTriCross:  vol0 = %d; vol1 = %d; vol2 = %d\n", vol0, vol1, vol2 ); 
                  out[i] = SegTriCross(vol0,vol1,vol2);
-                 FoundIt = true;
-                  //printf("out %d\n",out[i]);
+                 //FoundIt = true;
 
              }else{
-                 our[i] = tmp_code;
+                 tmp_code = tmp_code;
          
              }
-         } 
-         //code = SegTriInt( Faces[f], q, r, p );
-         //printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", f, code );
-         /* 
-         //If ray is degenerate, then goto outer while to generate another.
-         if ( code == 'p' || code == 'v' || code == 'e' ) {
-            printf("Degenerate ray\n");
-            goto LOOP;
          }
-   
+         code = tmp_code;
+         //code = 10;
+         //printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", i, code ); 
+          
+         //If ray is degenerate, then goto outer while to generate another.
+         if ( code == 10 || code == 2 || code == 3 ) {
+            printf("Degenerate ray\n");
+            out[i] = -3;
+            FoundIt = true;  
+            //printf("out %d\n",out[i]);
+         }
+         
          //If ray hits face at interior point, increment crossings.
-         else if ( code == 'f' ) {
+         else if ( code == 4 ) {
             crossings++;
             printf( "crossings = %d\n", crossings );
          }
 
          //If query endpoint q sits on a V/E/F, return that code.
-         else if ( code == 'V' || code == 'E' || code == 'F' )
+         else if ( code == 2 || code == 3|| code == 4)
             //return code;
             out[i] = code;
 
          //If ray misses triangle, do nothing. 
-         else if ( code == '0' )
+         else if ( code == 0 )
             ;
 
-         else 
-            fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);
-
-       */
+         else{
+            out[i] = -1;
+         } 
+            //fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);      
        }
+       if( ( crossings % 2 ) == 1 )
+          out[i] = 1;
+       else out[i] = 0;
+       printf("check if every point is check i -> %d, out -> %d \n",i,out[i]);
 }
 
 int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius )
@@ -411,7 +417,7 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
     //printf("Box test %d\n",cu_box[0][0][0]);
    
    //LOOP:
-   //while( k++ < F) {
+    //while( k++ < F) {
       crossings = 0;
   
       RandomRay( r, radius ); 
@@ -421,7 +427,7 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
       cudaMemcpy(final_r, r, sizeof(tPointd), cudaMemcpyHostToDevice);
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
       cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
-      
+      printf("RRResult %d\n",result[k]);   
      // break;
 
    //}  
@@ -454,12 +460,6 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
  void RandomRay( tPointd ray, int radius )
 {
   double x, y, z, w, t;
-  /*int tId = threadIdx.x + (blockIdx.x * blockDim.x);
-  curandState state;
-  curand_init((unsigned long long)clock() + tId, 0, 0, &state);
-
-  double rand1 = curand_uniform_double(&state);
-  double rand2 = curand_uniform_double(&state);*/
   /* Generate a random point on a sphere of radius 1. */
   /* the sphere is sliced at z, and a random point at angle t
      generated on the circle of intersection. */
