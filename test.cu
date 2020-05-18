@@ -390,7 +390,6 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_V,*final_r,*final_q;
     tPointi *cu_box,*ori_F;
     int *out,*result;
-    printf("pppppp\n");
     //char result[counter];
     result = (int *)malloc(sizeof(int)*F);
     
@@ -427,7 +426,7 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
       cudaMemcpy(final_r, r, sizeof(tPointd), cudaMemcpyHostToDevice);
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
       cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
-      printf("RRResult %d\n",result[k]);   
+      //printf("RRResult %d\n",result[k]);   
      // break;
 
    //}  
