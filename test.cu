@@ -68,6 +68,8 @@ int main(){
         printf( "In = %d\n", InPolyhedron( index , F,n, q, bmin, bmax, radius ) );
         counter--;
     }
+    // check segment
+    
     
     return 0;
 }
@@ -451,9 +453,9 @@ int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, 
        final_result = final_result + result[c];
    }
    if(final_result % 2 == 1){
-       final_result == 1;
+       final_result = 1;
    }else{
-       final_result == 0;
+       final_result = 0;
    }
    //printf("testt final %d\n", index);
    free(result);
