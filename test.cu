@@ -58,7 +58,9 @@ int main(){
         bmin[i] = bmax[i] = Vertices[0][i];
     }
     radius = ComputeBox( n, bmin, bmax );
-    counter = com_vertices - 1;
+
+    int counter = com_vertices - 1;
+    int index = counter;
     while( counter >= 0 ) {
         int index = com_vertices - counter - 1;
         q[X] = com_Vertices[counter][X];
@@ -69,9 +71,50 @@ int main(){
         counter--;
     }
     // check segment
+    tPointd *c_com_V, *ori_V;//*final_r, *final_q;
+    tPointi *cu_box,*ori_F;
+    int *out,*result;
+    //char result[counter];
+    result = (int *)malloc(sizeof(int)*F);
     
-    
+    cudaMalloc(&c_com_V,sizeof(tPointd)*F);
+    cudaMalloc(&ori_V,sizeof(tPointd)*n);
+    cudaMalloc(&ori_F,sizeof(tPointi)*F);
+    //cudaMalloc(&final_r,sizeof(tPointd));
+    //cudaMalloc(&final_q,sizeof(tPointd)); 
+    cudaMalloc(&out,sizeof(tPointi)*F);
+
+    cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
+    cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*n, cudaMemcpyHostToDevice);
+    cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
+    //cudaMemcpy(final_q, q, sizeof(tPointd), cudaMemcpyHostToDevice);
+    cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
+    check_segment<<<index,1>>>(ori_V,ori_F,c_com_V,c_com_V);
+    free(result);cudaFree(c_com_V);
+    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
+    cudaFree(final_q);cudaFree(out);cudaFree(cu_box);
+
     return 0;
+}
+__global__ check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
+      tPointd N,rq;
+      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
+      // Cal dot
+      double D,num,denom,t;
+      D = Dot( ori_V[ori_F[i][0]], N );
+      int m;
+      m = PlaneCoeff(N);
+      num = D - Dot( *q, N );
+      rq[X] = r[0][X] - q[0][X];
+      rq[Y] = r[0][Y] - q[0][Y];
+      rq[Z] = r[0][Z] - q[0][Z];
+      denom = Dot(rq,N);
+      int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
+      t = num / denom;
+
+
 }
 __device__ double Dot( tPointd a, tPointd b )
 {
