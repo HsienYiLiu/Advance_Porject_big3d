@@ -36,7 +36,7 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
 int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius );
-__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r);
+//__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r);
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
