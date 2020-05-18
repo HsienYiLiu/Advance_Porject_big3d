@@ -36,6 +36,7 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
 int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius );
+__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r);
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -91,12 +92,11 @@ int main(){
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
     check_segment<<<index,1>>>(ori_V,ori_F,c_com_V,c_com_V);
     free(result);cudaFree(c_com_V);
-    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
-    cudaFree(final_q);cudaFree(out);cudaFree(cu_box);
+    cudaFree(ori_F);cudaFree(ori_V);cudaFree(out);cudaFree(cu_box);
 
     return 0;
 }
-__global__ check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
+__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
       tPointd N,rq;
       N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
