@@ -24,7 +24,8 @@ tPointi com_Faces[PMAX];
 int check = 0;
 tPointi Box[PMAX][2];          /* Box around each face */
 int n_facets, n_vertices;      /* Original polyhedron*/
-int com_facets, com_vertices;  /* Original polyhedron*/
+int com_facets, com_vertices,counter;  /* Original polyhedron*/
+int final[PMAX];
 
 void read_ori(void);
 void read_com(void);
@@ -34,7 +35,7 @@ __device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
-int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius );
+int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius );
 //__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointd * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, int * out);
 //read_ori();
 int main(){
@@ -50,15 +51,17 @@ int main(){
         bmin[i] = bmax[i] = Vertices[0][i];
     }
     radius = ComputeBox( n, bmin, bmax );
-    int counter = com_vertices - 1;
+    counter = com_vertices - 1;
     while( counter >= 0 ) {
+        int index = com_vertices - counter - 1;
         q[X] = com_Vertices[counter][X];
         q[Y] = com_Vertices[counter][Y];
         q[Z] = com_Vertices[counter][Z];
         printf( "\n %d -------->q = %lf %lf %lf\n", counter, q[X], q[Y], q[Z] );
-        printf( "In = %c\n", InPolyhedron( F,n, q, bmin, bmax, radius ) );
+        printf( "In = %d\n", InPolyhedron( index , F,n, q, bmin, bmax, radius ) );
         counter--;
     }
+    
     return 0;
 }
 __device__ double Dot( tPointd a, tPointd b )
@@ -97,7 +100,7 @@ __device__ int SegPlaneInt(double D,double denom, double num, tPointd q, tPointd
 
     if ( denom == 0.0 ) {  /* Segment is parallel to plane. */
        if ( num == 0.0 )   /* q is on plane. */
-           return 10;
+           return 5;
        else
            return 0;
     }
@@ -111,12 +114,12 @@ __device__ int SegPlaneInt(double D,double denom, double num, tPointd q, tPointd
 
     if ( (0.0 < t) && (t < 1.0) )
          //return '1';
-         return 1;
+         return 9;
     else if ( num == 0.0 )   //t == 0 
-         return 8;
+         return 6;
     else if ( num == denom ) //t == 1 
          return 7;
-    else return 0;
+    else return 8;
 }
 __device__ int AreaSign( tPointd a, tPointd b, tPointd c )  
 {
@@ -137,28 +140,28 @@ __device__ int InTri2D( int area0, int area1, int area2 )
    if ( ( area0 == 0 ) && ( area1 > 0 ) && ( area2 > 0 ) ||
         ( area1 == 0 ) && ( area0 > 0 ) && ( area2 > 0 ) ||
         ( area2 == 0 ) && ( area0 > 0 ) && ( area1 > 0 ) ) 
-     return 3;
+     return 2;
 
    if ( ( area0 == 0 ) && ( area1 < 0 ) && ( area2 < 0 ) ||
         ( area1 == 0 ) && ( area0 < 0 ) && ( area2 < 0 ) ||
         ( area2 == 0 ) && ( area0 < 0 ) && ( area1 < 0 ) )
-     return 3;                 
+     return 2;                 
    
    if ( ( area0 >  0 ) && ( area1 > 0 ) && ( area2 > 0 ) ||
         ( area0 <  0 ) && ( area1 < 0 ) && ( area2 < 0 ) )
-     return 4;
+     return 3;
 
    if ( ( area0 == 0 ) && ( area1 == 0 ) && ( area2 == 0 ) )
      //printf( "Error in InTriD\n" ); exit(EXIT_FAILURE);
-     return 0;    
+     return -3;    
 
    if ( ( area0 == 0 ) && ( area1 == 0 ) ||
         ( area0 == 0 ) && ( area2 == 0 ) ||
         ( area1 == 0 ) && ( area2 == 0 ) )
-     return 2;
+     return 1;
 
    else  
-     return 0;  
+     return 4;  
 }
 __device__ int VolumeSign( tPointd a, tPointd b, tPointd c, tPointd d )
 { 
@@ -205,7 +208,7 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
    /* Same sign: segment intersects interior of triangle. */
    if ( ( ( vol0 > 0 ) && ( vol1 > 0 ) && ( vol2 > 0 ) ) || 
         ( ( vol0 < 0 ) && ( vol1 < 0 ) && ( vol2 < 0 ) ) )
-      return 4;
+      return 33;
    
    /* Opposite sign: no intersection between segment and triangle */
    if ( ( ( vol0 > 0 ) || ( vol1 > 0 ) || ( vol2 > 0 ) ) &&
@@ -214,20 +217,20 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
 
    else if ( ( vol0 == 0 ) && ( vol1 == 0 ) && ( vol2 == 0 ) )
      //fprintf( stderr, "Error 1 in SegTriCross\n" ), exit(EXIT_FAILURE);
-     return -1;   
+     return -3;   
  
    /* Two zeros: segment intersects vertex. */
    else if ( ( ( vol0 == 0 ) && ( vol1 == 0 ) ) || 
              ( ( vol0 == 0 ) && ( vol2 == 0 ) ) || 
              ( ( vol1 == 0 ) && ( vol2 == 0 ) ) )
-      return 2;
+      return 11;
 
    /* One zero: segment intersects edge. */
    else if ( ( vol0 == 0 ) || ( vol1 == 0 ) || ( vol2 == 0 ) )
-      return 3;
+      return 22;
    
    else
-     return -1;
+     return -3;
      //fprintf( stderr, "Error 2 in SegTriCross\n" ), exit(EXIT_FAILURE);
 }
 __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
@@ -239,10 +242,13 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
       __syncthreads();
       int f, k = 0, crossings = 0;
       int code = -1; 
+      //int i = blockIdx.x;
       int i = blockIdx.x;
+      //printf("i %d \n",i);
       crossings = 0;
       // get N
       tPointd N,rq;
+      //printf("q qqqqqq %lf, %lf, %lf\n",q[0][X],q[0][Y],q[0][Z]);
       N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
@@ -272,14 +278,14 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
               
               out[i] = 0;
               FoundIt = true;
-              //printf("BoxTest = 0!\n");
+              printf("BoxTest = 0!\n");
          }
          else if(FoundIt == false){
-             if(tmp_code == 0){
-                 tmp_code = 0;
+             if(tmp_code == 8){
+                 tmp_code = 8;
                  //FoundIt == true;
              }
-             if(tmp_code == 8){
+             if(tmp_code == 6){
                  tPointd pp,Tp[3];     // projected T: three new vertices 
                  //t = num / denom;
                  
@@ -298,7 +304,7 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
                  }
                  int area0 = AreaSign( pp, Tp[0], Tp[1] );
                  int area1 = AreaSign( pp, Tp[1], Tp[2] );
-                 int area2 = AreaSign( pp, Tp[2], Tp[0] );
+                 int area2 = AreaSign( pp, Tp[2], Tp[0] );                 
                  tmp_code = InTri2D(  area0, area1, area2 );
                  //FoundIt == true;
                  //printf("areaaa %d\n", out[i]);
@@ -331,13 +337,13 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
              //}else if(tmp_code == 10){
                  //out[i] = 10;
                  //FoundIt == true;
-             }else if(tmp_code == 1){
+             }else if(tmp_code == 9){
                  int vol0, vol1, vol2;
                  vol0 = VolumeSign( q[0], ori_V[ori_F[i][0] ], ori_V[ori_F[i][1] ], r[0] );
                  vol1 = VolumeSign( q[0], ori_V[ori_F[i][1] ], ori_V[ori_F[i][2] ], r[0] );
                  vol2 = VolumeSign( q[0], ori_V[ori_F[i][2] ], ori_V[ori_F[i][0] ], r[0] );
                  //printf( "SegTriCross:  vol0 = %d; vol1 = %d; vol2 = %d\n", vol0, vol1, vol2 ); 
-                 out[i] = SegTriCross(vol0,vol1,vol2);
+                 tmp_code = SegTriCross(vol0,vol1,vol2);
                  //FoundIt = true;
 
              }else{
@@ -345,45 +351,49 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
          
              }
          }
-         code = tmp_code;
-         //code = 10;
-         //printf( "Face = %d: BoxTest/SegTriInt returns %c\n\n", i, code ); 
+         if(FoundIt == false){
+           code = tmp_code;
+           //code = 10;
+           printf( "Face = %d: BoxTest/SegTriInt returns %d\n\n", i, code ); 
           
-         //If ray is degenerate, then goto outer while to generate another.
-         if ( code == 10 || code == 2 || code == 3 ) {
-            printf("Degenerate ray\n");
-            out[i] = -3;
-            FoundIt = true;  
-            //printf("out %d\n",out[i]);
-         }
+           //If ray is degenerate, then goto outer while to generate another.
+           //if ( code == 10 || code == 2 || code == 3 ) {
+           if( code == 5 || code == 11 || code == 22){
+              printf("Degenerate ray\n");
+              //out[i] = -3;
+              //crossing++;
+              FoundIt = true;  
+              //printf("out %d\n",out[i]);
+           }
          
-         //If ray hits face at interior point, increment crossings.
-         else if ( code == 4 ) {
-            crossings++;
-            printf( "crossings = %d\n", crossings );
+           //If ray hits face at interior point, increment crossings.
+           else if ( code == 1|| code == 9) {
+              crossings++;
+              //printf( "crossings = %d\n", crossings );
+           }
+
+           //If query endpoint q sits on a V/E/F, return that code.
+           else if ( code == 2 || code == 3|| code == 1)
+              //return code;
+              out[i] = code;
+
+           //If ray misses triangle, do nothing. 
+           else if ( code == 44 || code == 8|| code == 8 )
+              ;
+
+           else{
+              out[i] = -3;
+           } 
+              //fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);      
          }
-
-         //If query endpoint q sits on a V/E/F, return that code.
-         else if ( code == 2 || code == 3|| code == 4)
-            //return code;
-            out[i] = code;
-
-         //If ray misses triangle, do nothing. 
-         else if ( code == 0 )
-            ;
-
-         else{
-            out[i] = -1;
-         } 
-            //fprintf( stderr, "Error, exit(EXIT_FAILURE)\n" ), exit(1);      
-       }
-       if( ( crossings % 2 ) == 1 )
-          out[i] = 1;
-       else out[i] = 0;
-       printf("check if every point is check i -> %d, out -> %d \n",i,out[i]);
+         //if( ( crossings % 2 ) == 1 )
+            //out[i] = 1;
+         out[i] = crossings;
+         printf("check if every point is check i -> %d, out -> %d \n",i,out[i]);
+         }
 }
 
-int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius )
+int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius )
 {
     tPointd r,p;  /* Intersection point; not used. */
     int f, k = 0, crossings = 0;
@@ -393,14 +403,14 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
     //char result[counter];
     result = (int *)malloc(sizeof(int)*F);
     
-   
+    printf("FFF %d\n",F); 
     cudaMalloc(&c_com_V,sizeof(tPointd)*F);
     cudaMalloc(&ori_V,sizeof(tPointd)*n);
     cudaMalloc(&ori_F,sizeof(tPointi)*F);
     cudaMalloc(&d_bmax,sizeof(tPointd)*3);
     cudaMalloc(&d_bmin,sizeof(tPointd)*3);
-    cudaMalloc(&final_r,sizeof(tPointd));
-    cudaMalloc(&final_q,sizeof(tPointd)); 
+    cudaMalloc(&final_r,sizeof(tPointd)*3);
+    cudaMalloc(&final_q,sizeof(tPointd)*3); 
     cudaMalloc(&cu_box,sizeof(tPointi)*2*F);
     cudaMalloc(&out,sizeof(tPointi)*F);
 
@@ -409,46 +419,43 @@ int InPolyhedron( int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius
     cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
     cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
-    cudaMemcpy(final_q, q, sizeof(tPointd), cudaMemcpyHostToDevice);
+    cudaMemcpy(final_q, q, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
     cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
 
     //printf("Box test %d\n",cu_box[0][0][0]);
    
    //LOOP:
-    //while( k++ < F) {
+    while( k++ < F) {
       crossings = 0;
   
       RandomRay( r, radius ); 
       AddVec( q, r ); // add the ray with the point to create end point
       
       printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
-      cudaMemcpy(final_r, r, sizeof(tPointd), cudaMemcpyHostToDevice);
+      cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
       cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
-      //printf("RRResult %d\n",result[k]);   
-     // break;
+      //printf("RRResult %d\n",k);   
+      break;
 
-   //}  
-   /*printf( "Crossings = %d\n", crossings );
-   // q strictly interior to polyhedron iff an odd number of crossings.
-   if( ( crossings % 2 ) == 1 )
-      //return   'i';
-      out[i] = 1;
-   //else return 'o';
-   else out[i] = 9;
-   */
-   //printf("result -->  %d\n", result[i]);
+   } 
+   // check result
+   int final_result = 0; 
+   for(int c = 0; c < counter; c++){
+       final_result = final_result;
+   }
+   printf("testt final %d\n", index);
    free(result);
    cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
    cudaFree(final_q);cudaFree(out);cudaFree(cu_box);
-   return 0;
+   return final_result;
 }
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
 {
   int i;
-
+  //printf("inbox test %lf,%lf,%lf \n", q[0],q[1],q[2]);
   if( ( bmin[X] <= q[X] ) && ( q[X] <= bmax[X] ) &&
       ( bmin[Y] <= q[Y] ) && ( q[Y] <= bmax[Y] ) &&
       ( bmin[Z] <= q[Z] ) && ( q[Z] <= bmax[Z] ) )
@@ -562,7 +569,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("big.off", "r");
+    fp = fopen("b.off", "r");
     int i = 0;
     int j,k,n,w;
 
@@ -639,7 +646,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("t.off", "r");
+    fp = fopen("small.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
