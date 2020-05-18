@@ -99,8 +99,7 @@ int main(){
         printf( "In = %c\n", InPolyhedron( F, q, bmin, bmax, radius ) );
         counter--;
     }
-    time_t end = time(NULL); 
-    printf("Time elpased is %ld seconds \n", (end - begin));
+
     /* Permutation two points to test 
        if they have intersection with outer polyhedron
     */
@@ -113,6 +112,8 @@ int main(){
               EXIT_SUCCESS;       
        }
     }
+    time_t end = time(NULL); 
+    printf("Time elpased is %ld seconds \n", (end - begin));
     printf("Inner polyhedron fully contains in the outer polyhedron");
 }
 
@@ -277,6 +278,7 @@ int InBox( tPointd q, tPointd bmin, tPointd bmax )
     '0': The segment lies strictly to one side or the other of the plane.
     '1': The segement intersects the plane, and 'p' does not hold.
 ---------------------------------------------------------------------*/
+//SegPlaneInt( Faces[f], Point_1, Point_2, p,&m );
 char	SegPlaneInt( tPointi T, tPointd q, tPointd r, tPointd p, int *m)
 {
     tPointd N; double D;
@@ -285,10 +287,10 @@ char	SegPlaneInt( tPointi T, tPointd q, tPointd r, tPointd p, int *m)
     int i;
 
     *m = PlaneCoeff( T, N, &D );
-    //printf("m=%d; plane=(%lf,%lf,%lf,%lf)\n", m, N[X],N[Y],N[Z],D);
     num = D - Dot( q, N );
     SubVec( r, q, rq );
     denom = Dot( rq, N );
+    //printf("m=%d; plane=(%lf,%lf)\n", m, num,denom);
     /*printf("SegPlaneInt: num=%lf, denom=%lf\n", num, denom );*/
 
     if ( denom == 0.0 ) {  /* Segment is parallel to plane. */
@@ -651,7 +653,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("big.off", "r");
+    fp = fopen("0.off", "r");
     int i = 0;
     int j,k,n,w;
     
@@ -726,7 +728,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("small.off", "r");
+    fp = fopen("demo.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
