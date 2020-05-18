@@ -96,26 +96,6 @@ int main(){
 
     return 0;
 }
-__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
-      tPointd N,rq;
-      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
-      // Cal dot
-      double D,num,denom,t;
-      D = Dot( ori_V[ori_F[i][0]], N );
-      int m;
-      m = PlaneCoeff(N);
-      num = D - Dot( *q, N );
-      rq[X] = r[0][X] - q[0][X];
-      rq[Y] = r[0][Y] - q[0][Y];
-      rq[Z] = r[0][Z] - q[0][Z];
-      denom = Dot(rq,N);
-      int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
-      t = num / denom;
-
-
-}
 __device__ double Dot( tPointd a, tPointd b )
 {
     int i;
@@ -283,6 +263,26 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
    else
      return -3;
      //fprintf( stderr, "Error 2 in SegTriCross\n" ), exit(EXIT_FAILURE);
+}
+__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
+      tPointd N,rq;
+      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
+      // Cal dot
+      double D,num,denom,t;
+      D = Dot( ori_V[ori_F[i][0]], N );
+      int m;
+      m = PlaneCoeff(N);
+      num = D - Dot( *q, N );
+      rq[X] = r[0][X] - q[0][X];
+      rq[Y] = r[0][Y] - q[0][Y];
+      rq[Z] = r[0][Z] - q[0][Z];
+      denom = Dot(rq,N);
+      int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
+      t = num / denom;
+
+
 }
 __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
 {
