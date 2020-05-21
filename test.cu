@@ -64,6 +64,7 @@ int main(){
     int counter = com_vertices - 1;
     int total = com_facets;
     int index = counter;
+    
     while( counter >= 0 ) {
         int index = com_vertices - counter - 1;
         q[X] = com_Vertices[counter][X];
@@ -504,16 +505,17 @@ int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, 
     cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
     cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*n, cudaMemcpyHostToDevice);
     cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
     cudaMemcpy(final_q, q, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
     cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
     cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
-
+    
+    printf("size %d\n",sizeof(bmin));
     //printf("Box test %d\n",cu_box[0][0][0]);
     int final_result;
    //LOOP:
-    while( k++ < F) {
+    //while( k++ < F) {
       //crossings = 0;
   
       RandomRay( r, radius ); 
@@ -532,9 +534,9 @@ int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, 
           }else 
               continue;
       }
-      break;
+      //break;
 
-   }
+   //}
    // check result
    //printf("testt final %d\n", counter);
    //for(int c = 0; c < counter; c++){
@@ -668,7 +670,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("b.off", "r");
+    fp = fopen("0.off", "r");
     int i = 0;
     int j,k,w;
 
@@ -745,7 +747,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("small.off", "r");
+    fp = fopen("demo.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
