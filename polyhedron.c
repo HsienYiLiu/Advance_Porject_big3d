@@ -108,7 +108,7 @@ int main(){
           if(CheckAllContain(F,com_Vertices[i],com_Vertices[j]) == 'T')
               continue;
           else
-              printf("Inner polyhedron doesn't fully contain in the outer polyhedron"); 
+              //printf("Inner polyhedron doesn't fully contain in the outer polyhedron"); 
               EXIT_SUCCESS;       
        }
     }
@@ -129,6 +129,7 @@ char CheckAllContain(int F, tPointd Point_1, tPointd Point_2){
     // Through each facets of outer polyhedron
     for( f = 0; f < F; f++ ){
        code = SegPlaneInt( Faces[f], Point_1, Point_2, p,&m );
+       printf("code  %c\n", code);
        if(code != '0'){
            return 'F';
        }else{
@@ -653,7 +654,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("0.off", "r");
+    fp = fopen("big.off", "r");
     int i = 0;
     int j,k,n,w;
     
@@ -728,7 +729,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     float a,b,c;
-    fp = fopen("demo.off", "r");
+    fp = fopen("small.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
