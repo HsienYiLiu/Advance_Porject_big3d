@@ -40,7 +40,7 @@ __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
 __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out);
-__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int indexr);
+__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int index,int * out);
 /*GPU Error Check*/
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -105,18 +105,38 @@ int main(){
         cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
         check_each<<<F,1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
         cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
+        int total = 0;
         for(int i = 0; i < F; i++){
-            if(result[i] > 0) {
-                printf("out %d\n",result[i]);
-            }else
-                continue;
-
+            total = total + result[i];
+        }
+        if(total % 2 != 1){
+            break;
         }
         counter--;
     }
     // Check Segment
+    free(result);
+    cudaFree(out);
+    cudaMalloc(&out,sizeof(tPointi)*F);
+    cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
+    result = (int *)malloc(sizeof(int)*F);
+    int segment_check = 0;
     for(int i = 0; i < com_vertices; i++){
-        check_segment<<<com_vertices,1>>>(ori_V,ori_F,c_com_V,i);
+        check_segment<<<com_vertices,1>>>(ori_V,ori_F,c_com_V,i,out);
+        cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
+        for(int i = 0; i < com_vertices; i++){
+            if(result[i] != 0){
+                segment_check = 1;
+                break;
+            }
+        }
+        if(segment_check == 1){
+            printf("Inner polehedron isn't inside the outer polehedron\n");
+            break;
+        }
+    }
+    if(segment_check == 0){
+        printf("Inner polehedron is inside the outer polehedron\n");
     }
     //printf("testt final %d\n", index);
     free(result);
@@ -169,11 +189,6 @@ __device__ int SegPlaneInt(double D,double denom, double num, tPointd q, tPointd
     }
     else
        t = num / denom;
-    //printf("SegPlaneInt: t=%lf \n", t );
-    
-    /*for( i = 0; i < DIM; i++ ){
-       p[i] = q[i] + t * ( r[i] - q[i] );
-    }*/
 
     if ( (0.0 < t) && (t < 1.0) )
          //return '1';
@@ -296,7 +311,7 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
      return -3;
      //fprintf( stderr, "Error 2 in SegTriCross\n" ), exit(EXIT_FAILURE);
 }
-__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int index){
+__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int index, int *out){
       tPointd N,rq;
       int i = blockIdx.x;
       int j = i + 1;
@@ -313,7 +328,7 @@ __global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int ind
       rq[Y] = q[index][Y] - q[j][Y];
       rq[Z] = q[index][Z] - q[j][Z];
       denom = Dot(rq,N);
-      int tmp_code = SegPlaneInt(D, denom, num, *q, *q);
+      out[i] = SegPlaneInt(D, denom, num, *q, *q);
       //printf("in check segment   %d, %d, %d\n",index, j, tmp_code);
 
 }
@@ -352,11 +367,11 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
               out[i] = 0;
               FoundIt = true;
          }
-         if (BoxTest( i, *q, *r, *Box ) == '0' && FoundIt == false) {
+         /*if (BoxTest( i, *q, *r, *Box ) == '0' && FoundIt == false) {
               
               out[i] = 0;
               FoundIt = true;
-         }else 
+         }*/else 
          if(FoundIt == false){
              if(tmp_code == 8){
                  tmp_code = 8;
@@ -573,7 +588,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("big.off", "r");
+    fp = fopen("0.off", "r");
     int i = 0;
     int j,k,w;
 
@@ -650,7 +665,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("small.off", "r");
+    fp = fopen("demo.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
