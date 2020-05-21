@@ -146,6 +146,161 @@ int main(){
     printf("Inner polyhedron fully contains in the outer polyhedron");
     return 0;
 }
+
+__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int index, int *out){
+      tPointd N,rq;
+      int i = blockIdx.x;
+      int j = i + 1;
+      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
+      // Cal dot
+      double D,num,denom;
+      D = Dot( ori_V[ori_F[i][0]], N );
+      
+      int m = PlaneCoeff(N);
+      num = D - Dot( *q, N );
+      rq[X] = q[index][X] - q[j][X];
+      rq[Y] = q[index][Y] - q[j][Y];
+      rq[Z] = q[index][Z] - q[j][Z];
+      denom = Dot(rq,N);
+      out[i] = SegPlaneInt(D, denom, num, *q, *q);
+      //printf("in check segment   %d, %d, %d\n",index, j, tmp_code);
+
+}
+__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
+{
+      
+      volatile __shared__ bool FoundIt;
+      // initialize shared status
+      FoundIt = false;
+      __syncthreads();
+      int k = 0, crossings = 0;
+      int code = -1; 
+      //int i = blockIdx.x;
+      int i = blockIdx.x;
+      //printf("i %d \n",i);
+      crossings = 0;
+      // get N
+      tPointd N,rq;
+      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
+      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
+      // Cal dot
+      double D,num,denom;
+      D = Dot( ori_V[ori_F[i][0]], N );
+      int m;
+      m = PlaneCoeff(N);
+      num = D - Dot( *q, N );
+      rq[X] = r[0][X] - q[0][X];
+      rq[Y] = r[0][Y] - q[0][Y];
+      rq[Z] = r[0][Z] - q[0][Z];
+      denom = Dot(rq,N);
+      int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
+
+      if(i < F){
+         if ( !InBox( *q, *bmin, *bmax ) == 2 ){
+              out[i] = 0;
+              FoundIt = true;
+         }
+         /*if (BoxTest( i, *q, *r, *Box ) == '0' && FoundIt == false) {
+              
+              out[i] = 0;
+              FoundIt = true;
+         }*/else 
+         if(FoundIt == false){
+             if(tmp_code == 8){
+                 tmp_code = 8;
+             }
+             if(tmp_code == 6){
+                 tPointd pp,Tp[3];     // projected T: three new vertices 
+                 
+                 // Project out coordinate m in both p and the triangular face 
+                 int j = 0;
+                 for ( i = 0; i < DIM; i++ ) {
+                     if ( i != m ) {    //skip largest coordinate 
+                         pp[j] = q[0][i];
+                         for ( k = 0; k < 3; k++ ){
+	                     Tp[k][j] = ori_V[ori_F[i][k]][i];
+                             //printf(" plane=(%lf)\n", Tp[k][j]);
+                         }
+                         j++;
+                          
+                      }
+                 }
+                 int area0 = AreaSign( pp, Tp[0], Tp[1] );
+                 int area1 = AreaSign( pp, Tp[1], Tp[2] );
+                 int area2 = AreaSign( pp, Tp[2], Tp[0] );                 
+                 tmp_code = InTri2D(  area0, area1, area2 );
+             }
+             else if(tmp_code == 7){
+                 tPointd pp,Tp[3];     // projected T: three new vertices 
+                 //t = num / denom;
+
+                 // Project out coordinate m in both p and the triangular face 
+                 int j = 0;
+                 for ( i = 0; i < DIM; i++ ) {
+                     if ( i != m ) {    //skip largest coordinate 
+                         pp[j] = r[0][i];
+                         for ( k = 0; k < 3; k++ ){
+                             Tp[k][j] = ori_V[ori_F[i][k]][i];
+                             //printf(" plane=(%lf)\n", Tp[k][j]);
+                         }
+                         j++;
+
+                      }
+                 }
+                 int area0 = AreaSign( pp, Tp[0], Tp[1] );
+                 int area1 = AreaSign( pp, Tp[1], Tp[2] );
+                 int area2 = AreaSign( pp, Tp[2], Tp[0] );
+                 tmp_code = InTri2D(  area0, area1, area2 );
+
+             }else if(tmp_code == 9){
+                 int vol0, vol1, vol2;
+                 vol0 = VolumeSign( q[0], ori_V[ori_F[i][0] ], ori_V[ori_F[i][1] ], r[0] );
+                 vol1 = VolumeSign( q[0], ori_V[ori_F[i][1] ], ori_V[ori_F[i][2] ], r[0] );
+                 vol2 = VolumeSign( q[0], ori_V[ori_F[i][2] ], ori_V[ori_F[i][0] ], r[0] );
+                 //printf( "SegTriCross:  vol0 = %d; vol1 = %d; vol2 = %d\n", vol0, vol1, vol2 ); 
+                 tmp_code = SegTriCross(vol0,vol1,vol2);
+                 //FoundIt = true;
+
+             }else{
+                 tmp_code = tmp_code;
+         
+             }
+         }
+         if(FoundIt == false){
+           code = tmp_code;
+
+           if( code == 5 || code == 11 || code == 22){
+              printf("Degenerate ray\n");
+              FoundIt = true;  
+           }
+         
+           //If ray hits face at interior point, increment crossings.
+           else if ( code == 33) {
+              crossings++;
+              printf( "crossings = %d\n", crossings );
+           }
+
+           //If query endpoint q sits on a V/E/F, return that code.
+           else if ( code == 2 || code == 3|| code == 1)
+              //return code;
+              out[i] = code;
+
+           //If ray misses triangle, do nothing. 
+           else if ( code == 44 || code == 8|| code == 8 )
+              ;
+
+           else{
+              out[i] = -3;
+           }    
+         }
+
+         out[i] = crossings;
+         
+         }
+}
 __device__ double Dot( tPointd a, tPointd b )
 {
     int i;
@@ -309,161 +464,6 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
      return -3;
      //fprintf( stderr, "Error 2 in SegTriCross\n" ), exit(EXIT_FAILURE);
 }
-__global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int index, int *out){
-      tPointd N,rq;
-      int i = blockIdx.x;
-      int j = i + 1;
-      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
-      // Cal dot
-      double D,num,denom;
-      D = Dot( ori_V[ori_F[i][0]], N );
-      
-      int m = PlaneCoeff(N);
-      num = D - Dot( *q, N );
-      rq[X] = q[index][X] - q[j][X];
-      rq[Y] = q[index][Y] - q[j][Y];
-      rq[Z] = q[index][Z] - q[j][Z];
-      denom = Dot(rq,N);
-      out[i] = SegPlaneInt(D, denom, num, *q, *q);
-      //printf("in check segment   %d, %d, %d\n",index, j, tmp_code);
-
-}
-__global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
-{
-      
-      volatile __shared__ bool FoundIt;
-      // initialize shared status
-      FoundIt = false;
-      __syncthreads();
-      int k = 0, crossings = 0;
-      int code = -1; 
-      //int i = blockIdx.x;
-      int i = blockIdx.x;
-      //printf("i %d \n",i);
-      crossings = 0;
-      // get N
-      tPointd N,rq;
-      N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
-      N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
-      // Cal dot
-      double D,num,denom;
-      D = Dot( ori_V[ori_F[i][0]], N );
-      int m;
-      m = PlaneCoeff(N);
-      num = D - Dot( *q, N );
-      rq[X] = r[0][X] - q[0][X];
-      rq[Y] = r[0][Y] - q[0][Y];
-      rq[Z] = r[0][Z] - q[0][Z];
-      denom = Dot(rq,N);
-      int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
-
-      if(i < F){
-         if ( !InBox( *q, *bmin, *bmax ) == 2 ){
-              out[i] = 0;
-              FoundIt = true;
-         }
-         /*if (BoxTest( i, *q, *r, *Box ) == '0' && FoundIt == false) {
-              
-              out[i] = 0;
-              FoundIt = true;
-         }*/else 
-         if(FoundIt == false){
-             if(tmp_code == 8){
-                 tmp_code = 8;
-             }
-             if(tmp_code == 6){
-                 tPointd pp,Tp[3];     // projected T: three new vertices 
-                 
-                 // Project out coordinate m in both p and the triangular face 
-                 int j = 0;
-                 for ( i = 0; i < DIM; i++ ) {
-                     if ( i != m ) {    //skip largest coordinate 
-                         pp[j] = q[0][i];
-                         for ( k = 0; k < 3; k++ ){
-	                     Tp[k][j] = ori_V[ori_F[i][k]][i];
-                             //printf(" plane=(%lf)\n", Tp[k][j]);
-                         }
-                         j++;
-                          
-                      }
-                 }
-                 int area0 = AreaSign( pp, Tp[0], Tp[1] );
-                 int area1 = AreaSign( pp, Tp[1], Tp[2] );
-                 int area2 = AreaSign( pp, Tp[2], Tp[0] );                 
-                 tmp_code = InTri2D(  area0, area1, area2 );
-             }
-             else if(tmp_code == 7){
-                 tPointd pp,Tp[3];     // projected T: three new vertices 
-                 //t = num / denom;
-
-                 // Project out coordinate m in both p and the triangular face 
-                 int j = 0;
-                 for ( i = 0; i < DIM; i++ ) {
-                     if ( i != m ) {    //skip largest coordinate 
-                         pp[j] = r[0][i];
-                         for ( k = 0; k < 3; k++ ){
-                             Tp[k][j] = ori_V[ori_F[i][k]][i];
-                             //printf(" plane=(%lf)\n", Tp[k][j]);
-                         }
-                         j++;
-
-                      }
-                 }
-                 int area0 = AreaSign( pp, Tp[0], Tp[1] );
-                 int area1 = AreaSign( pp, Tp[1], Tp[2] );
-                 int area2 = AreaSign( pp, Tp[2], Tp[0] );
-                 tmp_code = InTri2D(  area0, area1, area2 );
-
-             }else if(tmp_code == 9){
-                 int vol0, vol1, vol2;
-                 vol0 = VolumeSign( q[0], ori_V[ori_F[i][0] ], ori_V[ori_F[i][1] ], r[0] );
-                 vol1 = VolumeSign( q[0], ori_V[ori_F[i][1] ], ori_V[ori_F[i][2] ], r[0] );
-                 vol2 = VolumeSign( q[0], ori_V[ori_F[i][2] ], ori_V[ori_F[i][0] ], r[0] );
-                 //printf( "SegTriCross:  vol0 = %d; vol1 = %d; vol2 = %d\n", vol0, vol1, vol2 ); 
-                 tmp_code = SegTriCross(vol0,vol1,vol2);
-                 //FoundIt = true;
-
-             }else{
-                 tmp_code = tmp_code;
-         
-             }
-         }
-         if(FoundIt == false){
-           code = tmp_code;
-
-           if( code == 5 || code == 11 || code == 22){
-              printf("Degenerate ray\n");
-              FoundIt = true;  
-           }
-         
-           //If ray hits face at interior point, increment crossings.
-           else if ( code == 33) {
-              crossings++;
-              printf( "crossings = %d\n", crossings );
-           }
-
-           //If query endpoint q sits on a V/E/F, return that code.
-           else if ( code == 2 || code == 3|| code == 1)
-              //return code;
-              out[i] = code;
-
-           //If ray misses triangle, do nothing. 
-           else if ( code == 44 || code == 8|| code == 8 )
-              ;
-
-           else{
-              out[i] = -3;
-           }    
-         }
-
-         out[i] = crossings;
-         
-         }
-}
-
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
 {
   //printf("baxxxx test %lf, %lf, %lf\n", q[Z],bmax[Z],q[X]);
