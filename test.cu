@@ -66,7 +66,6 @@ int main(){
     }
     radius = ComputeBox( n, bmin, bmax );
     int counter = com_vertices - 1;
-    int index = counter;
     tPointd *d_bmin, *d_bmax, *c_com_V,*ori_V,*final_r,*final_q;
     tPointi *cu_box,*ori_F;
     int *out,*result;
@@ -93,7 +92,6 @@ int main(){
     //Check whether the point is inside the polyhedron
     while( counter >= 0 ) {
         tPointd r;
-        int index = com_vertices - counter - 1;
         q[X] = com_Vertices[counter][X];
         q[Y] = com_Vertices[counter][Y];
         q[Z] = com_Vertices[counter][Z];
@@ -319,10 +317,10 @@ __global__ void check_segment(tPointd *ori_V, tPointi *ori_F, tPointd *q,int ind
       N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
       // Cal dot
-      double D,num,denom,t;
+      double D,num,denom;
       D = Dot( ori_V[ori_F[i][0]], N );
-      int m;
-      m = PlaneCoeff(N);
+      
+      int m = PlaneCoeff(N);
       num = D - Dot( *q, N );
       rq[X] = q[index][X] - q[j][X];
       rq[Y] = q[index][Y] - q[j][Y];
