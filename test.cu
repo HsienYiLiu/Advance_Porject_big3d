@@ -35,8 +35,8 @@ __device__ char BoxTest ( int n, tPointd a, tPointd b, tPointi Box );
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax );
 void RandomRay( tPointd ray, int radius );
 void AddVec( tPointd q, tPointd ray );
-int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius,int counter );
-__global__ void check_segment(tPointd *ori_V,tPointi *ori_F,tPointd *q,tPointd *r,int *out,int index);
+int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius );
+//__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r);
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -47,7 +47,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 int main(){
-    time_t begin = time(NULL);
     int n, F, i;
     tPointd q, bmin, bmax;
     int radius;
@@ -62,59 +61,55 @@ int main(){
     radius = ComputeBox( n, bmin, bmax );
 
     int counter = com_vertices - 1;
-    int total = com_facets;
     int index = counter;
-    
+        tPointd *d_bmin, *d_bmax, *c_com_V,*ori_V,*final_r,*final_q;
+    tPointi *cu_box,*ori_F;
+    int *out,*result;
+    //char result[counter];
+    result = (int *)malloc(sizeof(int)*F);
+    gpuErrchk(cudaMalloc(&c_com_V,sizeof(tPointd)*F));
+    cudaMalloc(&ori_V,sizeof(tPointd)*n);
+    cudaMalloc(&ori_F,sizeof(tPointi)*F);
+    cudaMalloc(&d_bmax,sizeof(tPointd)*3);
+    cudaMalloc(&d_bmin,sizeof(tPointd)*3);
+    cudaMalloc(&final_r,sizeof(tPointd)*3);
+    cudaMalloc(&final_q,sizeof(tPointd)*3); 
+    cudaMalloc(&cu_box,sizeof(tPointi)*2*F);
+    cudaMalloc(&out,sizeof(tPointi)*F);
+
+    cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
+    cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*n, cudaMemcpyHostToDevice);
+    cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*DIM, cudaMemcpyHostToDevice);
+    cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
+    cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
+
+    //check the point is inside the polyhedron
     while( counter >= 0 ) {
         int index = com_vertices - counter - 1;
         q[X] = com_Vertices[counter][X];
         q[Y] = com_Vertices[counter][Y];
         q[Z] = com_Vertices[counter][Z];
         printf( "\n %d -------->q = %lf %lf %lf\n", counter, q[X], q[Y], q[Z] );
-        printf( "In = %d\n", InPolyhedron( index , F,n, q, bmin, bmax, radius, total ) );
+        RandomRay( r, radius ); 
+        AddVec( q, r ); // add the ray with the point to create end point
+        cudaMemcpy(final_q, q, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
+        printf("Ray endpoint: (%lf,%lf,%lf)\n", r[0],r[1],r[2] );
+        cudaMemcpy(final_r, r, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
+        check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
+        cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
+        printf( "In = %d\n", InPolyhedron( index , F,n, q, bmin, bmax, radius ) );
         counter--;
     }
-    // check segment
-    tPointd *c_com_V, *ori_V;//*final_r, *final_q;
-    tPointi *cu_box,*ori_F;
-    int *out,*result;
-    //char result[counter];
-    result = (int *)malloc(sizeof(int)*F);
-    
-    cudaMalloc(&c_com_V,sizeof(tPointd)*F);
-    cudaMalloc(&ori_V,sizeof(tPointd)*n);
-    cudaMalloc(&ori_F,sizeof(tPointi)*F);
-    //cudaMalloc(&final_r,sizeof(tPointd));
-    //cudaMalloc(&final_q,sizeof(tPointd)); 
-    cudaMalloc(&out,sizeof(tPointi)*com_vertices);
+     /*
+    check_segment<<<index,1>>>(ori_V,ori_F,c_com_V,c_com_V);
+    //printf("testt final %d\n", index);
+    free(result);
+    cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
+    cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
+    cudaFree(final_q);cudaFree(out);cudaFree(cu_box);*/
 
-    cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
-    cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*n, cudaMemcpyHostToDevice);
-    cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
-    //cudaMemcpy(final_q, q, sizeof(tPointd), cudaMemcpyHostToDevice);
-    cudaMemcpy(out, result, sizeof(int)*com_vertices, cudaMemcpyHostToDevice);
-    for(int i = 0; i <com_vertices - 1;i++){
-        //printf("ffff %d\n",index);
-        check_segment<<<index,1>>>(ori_V,ori_F,c_com_V,c_com_V,out,i);
-    }
-    cudaMemcpy(result,out, sizeof(int)*com_vertices, cudaMemcpyDeviceToHost);
-    for(int j = 0; j < com_vertices - 1;j++){
-        if(result[j] == 1){
-           continue;
-        }else{
-           printf("This polyhedron is not full contain\n");
-           free(result);cudaFree(c_com_V);
-           cudaFree(ori_F);cudaFree(ori_V);cudaFree(out);cudaFree(cu_box);
-           time_t end = time(NULL); 
-           printf("Time elpased is %ld seconds \n", (end - begin));
-           return 0;
-        }
-    }
-    printf("Congrats! This polyhedron fully contain\n");
-    free(result);cudaFree(c_com_V);
-    cudaFree(ori_F);cudaFree(ori_V);cudaFree(out);cudaFree(cu_box);
-    time_t end = time(NULL); 
-    printf("Time elpased is %ld seconds \n", (end - begin));
     return 0;
 }
 __device__ double Dot( tPointd a, tPointd b )
@@ -285,11 +280,8 @@ __device__ int SegTriCross(int vol0, int vol1, int vol2)
      return -3;
      //fprintf( stderr, "Error 2 in SegTriCross\n" ), exit(EXIT_FAILURE);
 }
-__global__ void check_segment(tPointd *ori_V,tPointi *ori_F,tPointd *q,tPointd *r,int * out, int index){
-      //int i = blockIdx.x+1;
-      int i = blockIdx.x + 1 ; 
+__global__ void check_segment(tPointd *ori_V,tPointd *ori_F,tPointd *q,tPointd *r){
       tPointd N,rq;
-      //printf("tttt %lf,%lf \n",q[1][0],q[1][1]);
       N[X] = (ori_V[ori_F[i][Z]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Y]][Y]-ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Y] = (ori_V[ori_F[i][Y]][Z]- ori_V[ori_F[i][X]][Z])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Z])-(ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y]);
       N[Z] = (ori_V[ori_F[i][Y]][X]- ori_V[ori_F[i][X]][X])*(ori_V[ori_F[i][Z]][Y]- ori_V[ori_F[i][X]][Y])-(ori_V[ori_F[i][Y]][Y]- ori_V[ori_F[i][X]][Y])*(ori_V[ori_F[i][Z]][X]- ori_V[ori_F[i][X]][X]);
@@ -298,23 +290,13 @@ __global__ void check_segment(tPointd *ori_V,tPointi *ori_F,tPointd *q,tPointd *
       D = Dot( ori_V[ori_F[i][0]], N );
       int m;
       m = PlaneCoeff(N);
-      //printf("m=%d; plane=(%d,%d,%d,%d)\n", index, i,r[index][Y],D);
       num = D - Dot( *q, N );
-      //printf("tttttt %lf, %lf, %lf\n",r[i][X],r[i][Y],r[i][Z]);
-      //printf("tttttt %lf, %lf, %lf\n",q[i+1][X],q[i+1][Y],q[i+1][Z]);
-      rq[X] = r[index][X] - q[i][X];
-      rq[Y] = r[index][Y] - q[i][Y];
-      rq[Z] = r[index][Z] - q[i][Z];
+      rq[X] = r[0][X] - q[0][X];
+      rq[Y] = r[0][Y] - q[0][Y];
+      rq[Z] = r[0][Z] - q[0][Z];
       denom = Dot(rq,N);
       int tmp_code = SegPlaneInt(D, denom, num, *q, *r);
-      if(tmp_code != 0){
-          out[i] = 1;
-      }else{
-          out[i] = 0;
-      }
-      //t = num / denom;
-      //printf("tttttt %lf, %lf,%d\n",num,denom,tmp_code);
-      //printf("chcccc code: %d\n", tmp_code);
+      t = num / denom;
 
 }
 __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd * c_com_V,int F,tPointi * ori_F,tPointd * ori_V,tPointd * r,tPointd * q, tPointi *Box, int * out)
@@ -473,47 +455,19 @@ __global__ void check_each( tPointd * bmin, tPointd * bmax,int radius, tPointd *
          }
          //if( ( crossings % 2 ) == 1 )
             //out[i] = 1;
-        //out[i] = crossings;
-         //printf("check if every point is check i -> %d, out -> %d \n",i,out[i]);
+         out[i] = crossings;
+         printf("check if every point is check i -> %d, out -> %d \n",i,out[i]);
          }
-      if(crossings % 2 == 1){
-          out[i]=1;
-      } else{
-          out[i] = 0;
-      }
 }
 
-int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius, int counter )
+int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, int radius )
 {
     tPointd r;  /* Intersection point; not used. */
     int k = 0;
-    tPointd *d_bmin, *d_bmax, *c_com_V,*ori_V,*final_r,*final_q;
-    tPointi *cu_box,*ori_F;
-    int *out,*result;
-    //char result[counter];
-    result = (int *)malloc(sizeof(int)*F);
-    gpuErrchk(cudaMalloc(&c_com_V,sizeof(tPointd)*F));
-    cudaMalloc(&ori_V,sizeof(tPointd)*n);
-    cudaMalloc(&ori_F,sizeof(tPointi)*F);
-    cudaMalloc(&d_bmax,sizeof(tPointd)*3);
-    cudaMalloc(&d_bmin,sizeof(tPointd)*3);
-    cudaMalloc(&final_r,sizeof(tPointd)*3);
-    cudaMalloc(&final_q,sizeof(tPointd)*3); 
-    cudaMalloc(&cu_box,sizeof(tPointi)*2*F);
-    cudaMalloc(&out,sizeof(tPointi)*F);
 
-    cudaMemcpy(c_com_V, com_Vertices, sizeof(tPointd)*F, cudaMemcpyHostToDevice);
-    cudaMemcpy(ori_V, Vertices, sizeof(tPointd)*n, cudaMemcpyHostToDevice);
-    cudaMemcpy(ori_F, Faces, sizeof(tPointi)*F, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_bmin, bmin, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_bmax, bmax, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(final_q, q, sizeof(tPointd)*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(cu_box, Box, sizeof(tPointi)*2*F, cudaMemcpyHostToDevice);
-    cudaMemcpy(out, result, sizeof(int)*F, cudaMemcpyHostToDevice);
-    
-    printf("size %d\n",sizeof(bmin));
+
     //printf("Box test %d\n",cu_box[0][0][0]);
-    int final_result;
+   
    //LOOP:
     //while( k++ < F) {
       //crossings = 0;
@@ -526,26 +480,20 @@ int InPolyhedron(int index, int F,int n, tPointd q, tPointd bmin, tPointd bmax, 
       check_each<<<F, 1>>>(d_bmin,d_bmax,radius,c_com_V,F,ori_F, ori_V,final_r,final_q,cu_box, out);     
       cudaMemcpy(result,out, sizeof(int)*F, cudaMemcpyDeviceToHost);
       //printf("RRResult %d\n",k);   
-      final_result = 0; 
-      for(int c = 0; c < counter; c++){
-          if(result[c] == 1){
-              final_result = 1;
-              break;
-          }else 
-              continue;
-      }
       //break;
 
-   //}
+   } 
    // check result
-   //printf("testt final %d\n", counter);
-   //for(int c = 0; c < counter; c++){
-     //  if(result
-   //}
-   free(result);
-   cudaFree(d_bmin);cudaFree(d_bmax);cudaFree(c_com_V);
-   cudaFree(ori_F);cudaFree(ori_V);cudaFree(final_r);
-   cudaFree(final_q);cudaFree(out);cudaFree(cu_box);
+   int final_result = 0; 
+   for(int c = 0; c < counter; c++){
+       final_result = final_result + result[c];
+   }
+   if(final_result % 2 == 1){
+       final_result = 1;
+   }else{
+       final_result = 0;
+   }
+
    return final_result;
 }
 __device__ int InBox( tPointd q, tPointd bmin, tPointd bmax )
@@ -637,10 +585,10 @@ int ComputeBox( int n, tPointd bmin, tPointd bmax ){
   cal<<<n+1, 1>>>(d_bmin, d_bmax, d_a, n);
   cudaMemcpy(max,d_bmax, sizeof(tPointd)*DIM, cudaMemcpyDeviceToHost);
   cudaMemcpy(min,d_bmin, sizeof(tPointd)*DIM, cudaMemcpyDeviceToHost);
-  //printf("------------------------\n");
-  // printf("bmax %lf bmin %lf \n",*max[X],*min[X]);
-  //printf("bmax %lf, bmin %lf \n",*max[Y],*min[Y]);
-  //printf("bmax %lf, bmin %lf \n",*max[Z],*min[Z]);
+  printf("------------------------\n");
+  printf("bmax %lf bmin %lf \n",*max[X],*min[X]);
+  printf("bmax %lf, bmin %lf \n",*max[Y],*min[Y]);
+  printf("bmax %lf, bmin %lf \n",*max[Z],*min[Z]);
   radius = sqrt( pow( (double)(*max[X] - *min[X]), 2.0 ) +
                  pow( (double)(*max[Y] - *min[Y]), 2.0 ) +
                  pow( (double)(*max[Z] - *min[Z]), 2.0 ) );
@@ -670,7 +618,7 @@ void read_ori(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("0.off", "r");
+    fp = fopen("b.off", "r");
     int i = 0;
     int j,k,w;
 
@@ -747,7 +695,7 @@ void read_com(void)
     ssize_t read;
     int count = 0;
     //float a,b,c;
-    fp = fopen("demo.off", "r");
+    fp = fopen("small.off", "r");
     int i ;
     if (fp == NULL)
         exit(EXIT_FAILURE);
